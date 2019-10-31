@@ -5,6 +5,7 @@ using Unity.Mathematics;
 using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
+using Unity.Collections;
 
 // ReSharper disable once InconsistentNaming
 [RequiresEntityConversion]
@@ -71,6 +72,7 @@ public class SpawnGridAuthoring : MonoBehaviour, IConvertGameObjectToEntity, IDe
         Mesh mesh,
         List<Material> materials)
     {
+
         var materialCount = materials.Count;
 
         // Don't add RenderMesh (and other required components) unless both mesh and material assigned.
