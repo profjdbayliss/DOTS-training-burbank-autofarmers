@@ -13,13 +13,15 @@ public class actor_authoring : MonoBehaviour, IConvertGameObjectToEntity
     //how fast we goin?
     public float speed;
 
+	public int intent;
+
     
     
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
         // Call methods on 'dstManager' to create runtime components on 'entity' here. Remember that:
-        var data = new actor_RunTimeComp { startPos = startPos, speed = speed, targetPos = targetPos };
+        var data = new actor_RunTimeComp { startPos = startPos, speed = speed, targetPos = targetPos, intent = intent };
            dstManager.AddComponentData(entity,data);
         
         
