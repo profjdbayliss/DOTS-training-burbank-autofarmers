@@ -13,3 +13,8 @@ public struct MovingTag : IComponentData
 {
 
 }
+
+public struct ErrorTag : IComponentData
+{
+
+}

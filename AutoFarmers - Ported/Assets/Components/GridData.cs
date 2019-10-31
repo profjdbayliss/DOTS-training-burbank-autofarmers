@@ -20,7 +20,10 @@ public class GridData : MonoBehaviour
     {
         gridStatus = new NativeHashMap<int, int>(100, Allocator.Persistent);
 
-        gridStatus.TryAdd(ConvertToHash(1, 1), 1);
+        gridStatus.TryAdd(ConvertToHash(4, 4), 1);
+        gridStatus.TryAdd(ConvertToHash(8, 8), 2);
+        gridStatus.TryAdd(ConvertToHash(15, 15), 3);
+        gridStatus.TryAdd(ConvertToHash(4, 4), 4);
         //int temp = 0;
         //gridStatus.TryGetValue(ConvertToHash(7, 7), out temp);
         //float2 tmp = GridData.Search(new float2(7, 7), 5, 3);

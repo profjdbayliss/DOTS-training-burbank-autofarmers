@@ -94,6 +94,7 @@ public class Movement : JobComponentSystem
                         translation.Value = new float3(translation.Value.x, translation.Value.y, translation.Value.z + actor.speed * deltaTime);
                     }
                 }
+
             }
 
             else
