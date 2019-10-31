@@ -13,8 +13,7 @@ public class GridData : MonoBehaviour
     const int ARRAY_MULTIPLIER = 10; // max number of statuses is 9
     const int ROCK = 1;
 
-    public static int sX = 10;
-    public static int sZ = 10;
+    public static int width = 100;
     public static NativeHashMap<int, int> gridStatus;
 
     public GameObject TestCubePrefab;
@@ -22,7 +21,7 @@ public class GridData : MonoBehaviour
 
     public void Awake()
     {
-        gridStatus = new NativeHashMap<int, int>(100, Allocator.Persistent);
+        gridStatus = new NativeHashMap<int, int>(width*width, Allocator.Persistent);
 
         //gridStatus.TryAdd(ConvertToHash(5, 4), ConvertDataValue(2, 1));
         //gridStatus.TryAdd(ConvertToHash(8, 5), ConvertDataValue(2, 2));
@@ -136,7 +135,7 @@ public class GridData : MonoBehaviour
                 countEnd = endY;
             }
             i = startX;
-            for (; i < countEnd; i++)
+            for (; j < countEnd; j++)
             {
                 hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value);
                 if (getStatus(value) == ROCK)
@@ -196,7 +195,7 @@ public class GridData : MonoBehaviour
                 countEnd = endY;
             }
             i = startX;
-            for (; i < countEnd; i++)
+            for (; j < countEnd; j++)
             {
                 hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value);
                 if (getStatus(value) == ROCK)

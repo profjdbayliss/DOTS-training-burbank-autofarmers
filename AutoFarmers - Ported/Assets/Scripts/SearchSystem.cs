@@ -54,7 +54,9 @@ public class SearchSystem : JobComponentSystem
             {
                 //TODO: Get a new task!
                 // right now it's an error though because we should always find things
-                ecb.AddComponent<ErrorTag>(index, entity);
+                //ecb.AddComponent<ErrorTag>(index, entity);
+                ecb.RemoveComponent<NeedsTaskTag>(index, entity);
+                ecb.AddComponent<MovingTag>(index, entity);
             }
         }
     }

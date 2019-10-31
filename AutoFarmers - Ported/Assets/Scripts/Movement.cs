@@ -1,4 +1,4 @@
-﻿using Unity.Burst;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -34,9 +34,9 @@ public class Movement : JobComponentSystem
         // Add fields here that your job needs to do its work.
         // For example,
         public float deltaTime;
-            public int initialDx;
-            public int initialDz;
-           public Translation trans;
+        public float2 rockPos;
+        [ReadOnly] public NativeHashMap<int, int> grid;
+        [ReadOnly] public int width;
 
 
         public void Execute(Entity entity, int index, ref Translation translation, [ReadOnly] ref Rotation rotation, ref actor_RunTimeComp actor)
@@ -45,6 +45,15 @@ public class Movement : JobComponentSystem
             float dx = actor.targetPos.x - translation.Value.x;
             float dz = actor.targetPos.y - translation.Value.z;
             bool moveXFirst;
+            float2 currentPos = new float2(translation.Value.x, translation.Value.z);
+            rockPos = GridData.FindTheRock(grid, currentPos, FindMiddlePos(currentPos, actor.targetPos), actor.targetPos,width,width);
+
+
+            if (rockPos.x != -1)
+            {
+                actor.targetPos = rockPos;
+                Debug.Log("Updated Position to " + rockPos + "Actor is now chasing a rock");
+            }
 
             Debug.Log(dx);
             Debug.Log(dz);
@@ -137,6 +146,25 @@ public class Movement : JobComponentSystem
 
             }
         }
+
+        public float2 FindMiddlePos(float2 currentPos, float2 targetPos)
+        {
+            float2 middlePos = new float2();
+
+            var dx = targetPos.x-currentPos.x;
+            var dz = targetPos.y-currentPos.y;
+
+            if (dx < dz)
+            {
+                middlePos = new float2(currentPos.x + dx, currentPos.y);
+            }
+            else
+            {
+                middlePos = new float2(currentPos.x, currentPos.y + dz);
+            }
+
+            return middlePos;
+        }
     }
 
    
@@ -153,6 +181,8 @@ public class Movement : JobComponentSystem
         // For example,
         job.deltaTime = Time.deltaTime;
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
+        job.grid = GridData.gridStatus;
+        job.width = GridData.width;
 
         // Now that the job is set up, schedule it to be run. 
         return job.Schedule(this, inputDependencies);

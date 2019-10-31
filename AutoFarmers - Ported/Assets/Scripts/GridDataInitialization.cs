@@ -19,9 +19,9 @@ public class GridDataInitialization : MonoBehaviour
 
 	void Start()
 	{
-		GridData.sX = gridWidth;
-		GridData.sZ = gridHeight;
-		GenerateGrid();
+        gridWidth = GridData.width;
+        gridHeight = GridData.width;
+        GenerateGrid();
 	}
 
 	void GenerateGrid()
