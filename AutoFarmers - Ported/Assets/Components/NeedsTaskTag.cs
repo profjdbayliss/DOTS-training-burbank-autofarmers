@@ -18,3 +18,17 @@ public struct ErrorTag : IComponentData
 {
 
 }
+
+public struct PerformRockTaskTag : IComponentData
+{
+
+}
+public struct RockTag : IComponentData
+{
+
+}
+
+public struct DestroyRockTag : IComponentData
+{
+
+}

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -11,6 +12,7 @@ public class Spawner : MonoBehaviour
     public GameObject Prefab;
     public int CountX = 2;
     public int CountY = 2;
+    public static int farmerNumber = 1;
 
     void Start()
     {
@@ -19,16 +21,24 @@ public class Spawner : MonoBehaviour
         var entityManager = World.Active.EntityManager;
 
         // Efficiently instantiate a bunch of entities from the already converted entity prefab
-        var instance = entityManager.Instantiate(prefab);
+        
+        Unity.Mathematics.Random rand = new Unity.Mathematics.Random(42);
 
-        // Place the instantiated entity in a grid with some noise
-        var position = transform.TransformPoint(new float3(5, 0, 5));
-        //var position = transform.TransformPoint(new float3(0,0,0));
-        entityManager.SetComponentData(instance, new Translation() { Value = position });
-        var data = new actor_RunTimeComp { startPos = new float2(8,8), speed = 2, targetPos = new float2(8,8) };
-        entityManager.SetComponentData(instance, data);
-        // give his first command based on the 1's in the hash
-        entityManager.AddComponentData(instance, new MovingTag());
+        for (int i = 0; i < farmerNumber; i++)
+        {
+            var instance = entityManager.Instantiate(prefab);
+            int startX = Math.Abs(rand.NextInt()) % GridData.width;
+            int startZ = Math.Abs(rand.NextInt()) % GridData.width;
+
+            // Place the instantiated entity in a grid with some noise
+            var position = new float3(startX, 2, startZ);
+            //var position = transform.TransformPoint(new float3(0,0,0));
+            entityManager.SetComponentData(instance, new Translation() { Value = position });
+            var data = new actor_RunTimeComp { startPos = new float2(startX, startZ), speed = 2, targetPos = new float2(0, 0) };
+            entityManager.SetComponentData(instance, data);
+            // give his first command based on the 1's in the hash
+            entityManager.AddComponentData(instance, new NeedsTaskTag());
+        }
     }
 }
 

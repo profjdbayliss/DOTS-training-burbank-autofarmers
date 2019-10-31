@@ -11,6 +11,7 @@ public class Movement : JobComponentSystem
 {
     public float deltaTime;
     public EntityCommandBufferSystem ecbs;
+   
 
     protected override void OnCreate()
     {
@@ -36,7 +37,7 @@ public class Movement : JobComponentSystem
         public float deltaTime;
         public float2 rockPos;
         [ReadOnly] public NativeHashMap<int, int> grid;
-        [ReadOnly] public int width;
+
 
 
         public void Execute(Entity entity, int index, ref Translation translation, [ReadOnly] ref Rotation rotation, ref actor_RunTimeComp actor)
@@ -44,15 +45,20 @@ public class Movement : JobComponentSystem
             // Calculate DX and DZ (y represents up, therefore we won't be using that in this case).  
             float dx = actor.targetPos.x - translation.Value.x;
             float dz = actor.targetPos.y - translation.Value.z;
+            //the specs state that we want to move in the shortest distance first, therefore, we will perform a check to decide whether x or z is smaller
+            //move from there. 
             bool moveXFirst;
+            //
+            bool headedToRock = false;
             float2 currentPos = new float2(translation.Value.x, translation.Value.z);
-            rockPos = GridData.FindTheRock(grid, currentPos, FindMiddlePos(currentPos, actor.targetPos), actor.targetPos,width,width);
+            rockPos = GridData.FindTheRock(grid, currentPos, FindMiddlePos(currentPos, actor.targetPos), actor.targetPos,10,10);
 
 
             if (rockPos.x != -1)
             {
                 actor.targetPos = rockPos;
                 Debug.Log("Updated Position to " + rockPos + "Actor is now chasing a rock");
+                headedToRock = true;
             }
 
             Debug.Log(dx);
@@ -140,7 +146,17 @@ public class Movement : JobComponentSystem
                 {
                     Debug.Log("At destination");
                     ecb.RemoveComponent<MovingTag>(index, entity);
-                    ecb.AddComponent<NeedsTaskTag>(index, entity);
+                    
+                    if (headedToRock)
+                    {
+                        ecb.AddComponent<PerformRockTaskTag>(index, entity);
+                        headedToRock = false;
+                    }
+                    else
+                    {
+                        ecb.AddComponent<NeedsTaskTag>(index, entity);
+                        headedToRock = false;
+                    }
                 }
 
 
@@ -182,7 +198,7 @@ public class Movement : JobComponentSystem
         job.deltaTime = Time.deltaTime;
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.grid = GridData.gridStatus;
-        job.width = GridData.width;
+        
 
         // Now that the job is set up, schedule it to be run. 
         return job.Schedule(this, inputDependencies);
