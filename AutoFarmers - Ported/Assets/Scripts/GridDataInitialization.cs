@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
 using Unity.Entities;
+using Unity.Transforms;
+
 
 public class GridDataInitialization : MonoBehaviour
 {
 	[Header("Grid Parameters")]
-	public int gridWidth;
-	public int gridHeight;
+	 int gridWidth;
+	 int gridHeight;
 	public int rockSpawnAttempts;
 	public int storeCount;
 
@@ -17,15 +19,25 @@ public class GridDataInitialization : MonoBehaviour
 	public GameObject RockPrefab;
 	public GameObject StorePrefab;
 
+	EntityManager em;
+	Entity rockEntity;
+
 	void Start()
 	{
-        gridWidth = GridData.width;
+		
+		gridWidth = GridData.width;
         gridHeight = GridData.width;
         GenerateGrid();
 	}
 
 	void GenerateGrid()
 	{
+		// Generate Entities
+		em = World.Active.EntityManager;
+		rockEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(RockPrefab, World.Active);
+		em.AddComponentData(rockEntity, new RockTag { });
+
+
 		// Spawn Grid Tiles
 		GridGeneratorPrefab.GetComponent<SpawnGridAuthoring>().ColumnCount = gridWidth;
 		GridGeneratorPrefab.GetComponent<SpawnGridAuthoring>().RowCount = gridHeight;
@@ -90,8 +102,8 @@ public class GridDataInitialization : MonoBehaviour
 				for (int y = rockY; y <= rockY + height; y++)
 				{
 					GridData.gridStatus.TryAdd(GridData.ConvertToHash(x, y), GridData.ConvertDataValue(1, 0));
-					Instantiate(RockPrefab, new Vector3(x, 0, y), Quaternion.identity);
-					
+					em.SetComponentData(rockEntity, new Translation() { Value = new Unity.Mathematics.float3(x,0,y) });
+					em.Instantiate(rockEntity);				
 				}
 			}
 		}
