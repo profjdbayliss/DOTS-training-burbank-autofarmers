@@ -9,6 +9,9 @@ using Unity.Collections;
 
 public class GridData : MonoBehaviour
 {
+    const int BOARD_MULTIPLIER = 1000; // max board x and y size is 999
+    const int ARRAY_MULTIPLIER = 10; // max number of statuses is 9
+
     public static int sX = 10;
     public static int sZ = 10;
     public static NativeHashMap<int, int> gridStatus;
@@ -33,10 +36,10 @@ public class GridData : MonoBehaviour
         CreateTestEntity();
     }
 
-    public void Update()
-    {
+    //public void Update()
+    //{
         
-    }
+    //}
 
     public static void InitializeHashMap(int capacity)
     {
@@ -51,32 +54,32 @@ public class GridData : MonoBehaviour
 
     public static int ConvertToHash(int row, int col)
     {
-        return row * 1000 + col;
+        return row * BOARD_MULTIPLIER + col;
     }
 
     public static int ConvertDataValue(int status, int arrayLocation)
     {
-        return arrayLocation * 10 + status;
+        return arrayLocation * ARRAY_MULTIPLIER + status;
     }
 
     public static int getArrayLocation(int dataValue)
     {
-       return dataValue / 10;
+       return dataValue / ARRAY_MULTIPLIER;
     }
 
     public static int getStatus(int dataValue)
     {
-        return dataValue - getArrayLocation(dataValue) * 10;
+        return dataValue - getArrayLocation(dataValue) * ARRAY_MULTIPLIER;
     }
 
     public static int getRow(int key)
     {
-        return key / 1000;
+        return key / BOARD_MULTIPLIER;
     }
 
     public static int getCol(int key)
     {
-        return key - getRow(key)*1000;
+        return key - getRow(key)* BOARD_MULTIPLIER;
     }
 
     public static float2 Search(NativeHashMap<int, int> hashMap, float2 currentPos, int radius, int statusToFind, int sizeX, int sizeZ)
