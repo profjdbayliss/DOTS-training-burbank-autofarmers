@@ -20,10 +20,10 @@ public class GridData : MonoBehaviour
     {
         gridStatus = new NativeHashMap<int, int>(100, Allocator.Persistent);
 
-        gridStatus.TryAdd(ConvertToHash(4, 4), 1);
-        gridStatus.TryAdd(ConvertToHash(8, 8), 2);
-        gridStatus.TryAdd(ConvertToHash(15, 15), 3);
-        gridStatus.TryAdd(ConvertToHash(4, 4), 4);
+        gridStatus.TryAdd(ConvertToHash(4, 4), ConvertDataValue(1, 5));
+        gridStatus.TryAdd(ConvertToHash(8, 8), ConvertDataValue(2, 6));
+        gridStatus.TryAdd(ConvertToHash(15, 15), ConvertDataValue(3, 1));
+        gridStatus.TryAdd(ConvertToHash(4, 4), ConvertDataValue(4, 2));
         //int temp = 0;
         //gridStatus.TryGetValue(ConvertToHash(7, 7), out temp);
         //float2 tmp = GridData.Search(new float2(7, 7), 5, 3);
@@ -52,6 +52,21 @@ public class GridData : MonoBehaviour
     public static int ConvertToHash(int row, int col)
     {
         return row * 1000 + col;
+    }
+
+    public static int ConvertDataValue(int status, int arrayLocation)
+    {
+        return arrayLocation * 10 + status;
+    }
+
+    public static int getArrayLocation(int dataValue)
+    {
+       return dataValue / 10;
+    }
+
+    public static int getStatus(int dataValue)
+    {
+        return dataValue - getArrayLocation(dataValue) * 10;
     }
 
     public static int getRow(int key)
@@ -89,7 +104,7 @@ public class GridData : MonoBehaviour
             for (int j = startY; j < endY; j++)
             {
                 hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value);
-                if (value == statusToFind)
+                if (getStatus(value) == statusToFind)
                 {
                     return new float2(i, j);
                 }
