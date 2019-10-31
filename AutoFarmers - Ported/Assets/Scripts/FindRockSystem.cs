@@ -17,7 +17,8 @@ public class FindRockSystem : JobComponentSystem
 		ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
 		m_RockQuery = GetEntityQuery(new EntityQueryDesc
 		{
-			All = new[] { ComponentType.ReadOnly<RockTag>()},
+			All = new[] { ComponentType.ReadOnly<RockTag>(), typeof(Translation)},
+
 		});
 	}
 
@@ -26,7 +27,7 @@ public class FindRockSystem : JobComponentSystem
 	struct FindRockSystemJob : IJobForEachWithEntity<Translation>
 	{
 		public EntityCommandBuffer.Concurrent ecb;
-		public NativeArray<Translation> rockLocations;
+		[ReadOnly] public NativeArray<Translation> rockLocations;
 		public NativeArray<Entity> rockEntities;
 		public int rockCount;
 
@@ -49,8 +50,8 @@ public class FindRockSystem : JobComponentSystem
 	{
 		var job = new FindRockSystemJob();
 		job.rockCount = m_RockQuery.CalculateEntityCount();
-		job.rockLocations = m_RockQuery.ToComponentDataArray<Translation>(Allocator.Temp);
-		job.rockEntities = m_RockQuery.ToEntityArray(Allocator.Temp);
+		job.rockLocations = m_RockQuery.ToComponentDataArray<Translation>(Allocator.TempJob);
+		job.rockEntities = m_RockQuery.ToEntityArray(Allocator.TempJob);
 		job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
 
 

@@ -7,11 +7,13 @@ using UnityEngine;
 public class actor_authoring : MonoBehaviour, IConvertGameObjectToEntity
 {
     //position that the object is at at time of "pathfinding" 
-    public Vector2 startPos;
+    public float2 startPos;
     //object destination
-    public Vector2 targetPos;
+    public float2 targetPos;
     //how fast we goin?
     public float speed;
+    // intention of actor data
+    public int intent;
 
     
     
@@ -19,7 +21,7 @@ public class actor_authoring : MonoBehaviour, IConvertGameObjectToEntity
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
         // Call methods on 'dstManager' to create runtime components on 'entity' here. Remember that:
-        var data = new actor_RunTimeComp { startPos = startPos, speed = speed, targetPos = targetPos };
+        var data = new actor_RunTimeComp { startPos = startPos, speed = speed, targetPos = targetPos, intent = intent };
            dstManager.AddComponentData(entity,data);
         
         

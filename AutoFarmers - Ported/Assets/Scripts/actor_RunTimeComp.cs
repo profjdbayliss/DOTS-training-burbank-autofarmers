@@ -7,7 +7,8 @@ using UnityEngine;
 [Serializable]
 public struct actor_RunTimeComp : IComponentData
 {
-    public Vector2 targetPos;
-    public Vector2 startPos; // WORK - delete this!
+    public float2 targetPos;
+    public float2 startPos; // WORK - delete this!
     public float speed;
+    public int intent;
 }
