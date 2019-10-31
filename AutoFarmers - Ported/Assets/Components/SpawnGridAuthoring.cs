@@ -30,13 +30,13 @@ public class SpawnGridAuthoring : MonoBehaviour, IConvertGameObjectToEntity, IDe
         var mesh = meshFilter.sharedMesh;
         meshRenderer.GetSharedMaterials(materials);
 
-        var cx = ((float)(RowCount / 2) * 1.1f) + 0.5f;
-        var cz = ((float)(ColumnCount / 2) * 1.1f) + 0.5f;
+        //var cx = ((float)(RowCount / 2) * 1.1f) + 0.5f;
+        //var cz = ((float)(ColumnCount / 2) * 1.1f) + 0.5f;
         for (int x = 0; x < RowCount; x++)
         for (int y = 0; y < ColumnCount; y++)
         {
-            var tx = (((float)x) * 1.1f) - cx;
-            var tz = (((float)y) * 1.1f) - cz;
+            var tx = (((float)x));
+            var tz = (((float)y));
 
             var segmentEntity = conversionSystem.CreateAdditionalEntity(gameObject);
             var pos = new float3(tx, 0.0f, tz);

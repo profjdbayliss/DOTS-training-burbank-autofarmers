@@ -20,15 +20,15 @@ public class GridData : MonoBehaviour
     public GameObject TestCubePrefab;
     EntityManager em;
 
-    public void Start()
+    public void Awake()
     {
         gridStatus = new NativeHashMap<int, int>(100, Allocator.Persistent);
 
-        gridStatus.TryAdd(ConvertToHash(5, 4), ConvertDataValue(2, 1));
-        gridStatus.TryAdd(ConvertToHash(8, 5), ConvertDataValue(2, 2));
-        gridStatus.TryAdd(ConvertToHash(7, 4), ConvertDataValue(1, 3));
-        gridStatus.TryAdd(ConvertToHash(5, 15), ConvertDataValue(1, 3));
-        gridStatus.TryAdd(ConvertToHash(8, 15), ConvertDataValue(3, 3));
+        //gridStatus.TryAdd(ConvertToHash(5, 4), ConvertDataValue(2, 1));
+        //gridStatus.TryAdd(ConvertToHash(8, 5), ConvertDataValue(2, 2));
+        //gridStatus.TryAdd(ConvertToHash(7, 4), ConvertDataValue(1, 3));
+        //gridStatus.TryAdd(ConvertToHash(5, 15), ConvertDataValue(1, 3));
+        //gridStatus.TryAdd(ConvertToHash(8, 15), ConvertDataValue(3, 3));
 
         // test find the rock
         //float2 value = FindTheRock(gridStatus, new float2(5, 4), new float2(8, 4), new float2(8, 5), sX, sZ);
@@ -43,7 +43,7 @@ public class GridData : MonoBehaviour
         //Debug.Log("count that exists: " + tmp.x + " " + tmp.y);
 
         em = World.Active.EntityManager;
-        CreateTestEntity();
+        //CreateTestEntity();
     }
 
     public static void InitializeHashMap(int capacity)
