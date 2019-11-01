@@ -41,11 +41,13 @@ public class DestroyRocks : JobComponentSystem
 
         public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation)
         {
+            
 
-            if (elapsedTime > 2.0f)
-            {
+            //if (elapsedTime > 2.0f)
+            //{
+            //    Debug.Log("destroying rock");
                 ecb.DestroyEntity(index, entity);
-            }
+            //}
             // Implement the work to perform for each entity here.
             // You should only access data that is local or that is a
             // field on this job. Note that the 'rotation' parameter is

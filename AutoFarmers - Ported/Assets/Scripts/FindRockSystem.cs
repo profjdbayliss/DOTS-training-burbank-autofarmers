@@ -41,7 +41,8 @@ public class FindRockSystem : JobComponentSystem
 				{
 					ecb.AddComponent<DestroyRockTag>(i, rockEntities[i]);
 					ecb.RemoveComponent<PerformRockTaskTag>(index, entity);
-				}
+                    ecb.AddComponent<NeedsTaskTag>(index, entity);
+                }
 			}
 		}
 	}

@@ -12,7 +12,7 @@ public class Spawner : MonoBehaviour
     public GameObject Prefab;
     public int CountX = 2;
     public int CountY = 2;
-    public static int farmerNumber = 1;
+    public static int farmerNumber = 50;
 
     void Start()
     {

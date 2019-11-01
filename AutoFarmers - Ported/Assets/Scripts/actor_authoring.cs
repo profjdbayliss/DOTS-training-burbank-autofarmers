@@ -15,10 +15,6 @@ public class actor_authoring : MonoBehaviour, IConvertGameObjectToEntity
     // intention of actor data
     public int intent;
 
-
-    
-    
-
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
         // Call methods on 'dstManager' to create runtime components on 'entity' here. Remember that:
