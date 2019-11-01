@@ -34,15 +34,17 @@ public class SearchSystem : JobComponentSystem
         public NativeHashMap<int, int> gridHashMap;
         [ReadOnly] public NativeArray<int> randArray;
         [ReadOnly] public int nextIndex;
+        [ReadOnly] public int gridSize;
+        [ReadOnly] public int radiusForSearch;
 
         public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref actor_RunTimeComp movementComponent)
         {
             // set new task: should be more complicated
             int taskValue = 1; // (randArray[(nextIndex + index) % randArray.Length] % 4) + 1;
             float2 pos = new float2(translation.Value.x, translation.Value.z);
-            float2 foundLocation = GridData.Search(gridHashMap, pos, 20, taskValue, 20, 20);
+            float2 foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, taskValue, gridSize, gridSize);
 
-            var rockPos = GridData.FindTheRock(gridHashMap, pos, MovementJob.FindMiddlePos(pos, movementComponent.targetPos), movementComponent.targetPos, 10, 10);
+            var rockPos = GridData.FindTheRock(gridHashMap, pos, MovementJob.FindMiddlePos(pos, movementComponent.targetPos), movementComponent.targetPos, gridSize, gridSize);
             if (foundLocation.x != -1 && foundLocation.y != -1 && rockPos.x != -1)
             {
                 rockPos = new float2(rockPos.x + 0.5f, rockPos.y + 0.5f);
@@ -51,8 +53,8 @@ public class SearchSystem : JobComponentSystem
                 var data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = rockPos, intent = 5 };
                 movementComponent = data;
                 //entityManager.SetComponentData(instance, data);
-                ecb.RemoveComponent<NeedsTaskTag>(index, entity);
-                ecb.AddComponent<MovingTag>(index, entity);
+                ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
+                ecb.AddComponent(index, entity, typeof(MovingTag));
                 int key = GridData.ConvertToHash((int)rockPos.x, (int)rockPos.y);
                 gridHashMap.Remove(key);
             }
@@ -62,11 +64,11 @@ public class SearchSystem : JobComponentSystem
                 {
                     foundLocation = new float2(foundLocation.x + 0.5f, foundLocation.y + 0.5f);
                     var data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = foundLocation, intent = taskValue };
-                    ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                    ecb.SetComponent(index, entity, data);
                     
                     
-                    ecb.RemoveComponent<NeedsTaskTag>(index, entity);
-                    ecb.AddComponent<MovingTag>(index, entity);
+                    ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
+                    ecb.AddComponent(index, entity, typeof(MovingTag));
 
                     if (taskValue == 1)
                     {
@@ -77,7 +79,7 @@ public class SearchSystem : JobComponentSystem
                 }
                 else
                 {
-                    ecb.RemoveComponent<NeedsTaskTag>(index, entity);
+                    ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
                     ecb.AddComponent<MovingTag>(index, entity);
                 }
             }
@@ -92,6 +94,8 @@ public class SearchSystem : JobComponentSystem
         job.randArray = randomValues;
         job.nextIndex = index;
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
+        job.gridSize = GridData.width;
+        job.radiusForSearch = 20;
 
         //Debug.Log("nextInt: " + (randomValues[(index) % randomValues.Length]%4 + 1));
         var jobHandle = job.ScheduleSingle(this, inputDependencies);

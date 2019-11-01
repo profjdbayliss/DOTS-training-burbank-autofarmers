@@ -11,7 +11,7 @@ public class Movement : JobComponentSystem
 {
 	public float deltaTime;
 	public EntityCommandBufferSystem ecbs;
-    private static IComponentData data = new PerformRockTaskTag();
+    private static PerformRockTaskTag data = new PerformRockTaskTag();
 
 
     protected override void OnCreate()
@@ -126,21 +126,23 @@ public class Movement : JobComponentSystem
                     {
                         var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 6 };
 
-                        ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                        ecb.SetComponent(index, entity, data);
 
-                        ecb.AddComponent<PerformRockTaskTag>(index, entity);
-                        ecb.RemoveComponent<MovingTag>(index, entity);
+                        ecb.AddComponent(index, entity, typeof(PerformRockTaskTag));
+                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
                     else
                     {
                         if (actor.intent == 1)
                         {
                             var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 5 };
-                            ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
-                        } else
+                            //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                            ecb.SetComponent(index, entity, data);
+                        }
+                        else
                         {
-                            ecb.AddComponent<NeedsTaskTag>(index, entity);
-                            ecb.RemoveComponent<MovingTag>(index, entity);
+                            ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                            ecb.RemoveComponent(index, entity, typeof(MovingTag));
                         }
                         
                     }
@@ -189,8 +191,8 @@ public class Movement : JobComponentSystem
 					{
                         var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 6 };
 
-                        ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
-						ecb.AddComponent(index, entity, new PerformRockTaskTag());
+                        ecb.SetComponent(index, entity, data);
+						ecb.AddComponent<PerformRockTaskTag>(index, entity);
                         ecb.RemoveComponent<MovingTag>(index, entity);
                     }
 					else
@@ -198,7 +200,7 @@ public class Movement : JobComponentSystem
                         if (actor.intent == 1)
                         {
                             var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 5 };
-                            ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                            ecb.SetComponent(index, entity, data);
                         }
                         else
                         {
