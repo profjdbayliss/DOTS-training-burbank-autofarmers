@@ -43,3 +43,8 @@ public struct PerformTillTaskTag : IComponentData
 
 }
 
+public struct PerformPlantingTaskTag : IComponentData
+{
+
+}
+

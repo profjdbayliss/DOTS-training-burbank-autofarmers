@@ -18,9 +18,13 @@ public class GridDataInitialization : MonoBehaviour
 	public GameObject GridGeneratorPrefab;
 	public GameObject RockPrefab;
 	public GameObject StorePrefab;
+    public GameObject TilledGroundPrefab;
 
 	EntityManager em;
 	Entity rockEntity;
+    public static Entity tilledTileEntity;
+	public static Entity plantEntity;
+
 
 	void Start()
 	{
@@ -33,12 +37,15 @@ public class GridDataInitialization : MonoBehaviour
 	{
 		// Generate Entities
 		em = World.Active.EntityManager;
+
 		rockEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(RockPrefab, World.Active);
-		em.AddComponentData(rockEntity, new RockTag { });
+        tilledTileEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(TilledGroundPrefab, World.Active);
+        
+        em.AddComponentData(rockEntity, new RockTag { });
 
 
-		// Spawn Grid Tiles
-		GridGeneratorPrefab.GetComponent<SpawnGridAuthoring>().ColumnCount = gridWidth;
+        // Spawn Grid Tiles
+        GridGeneratorPrefab.GetComponent<SpawnGridAuthoring>().ColumnCount = gridWidth;
 		GridGeneratorPrefab.GetComponent<SpawnGridAuthoring>().RowCount = gridHeight;
 		Instantiate(GridGeneratorPrefab);
 
