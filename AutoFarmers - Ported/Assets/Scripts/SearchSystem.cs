@@ -31,7 +31,7 @@ public class SearchSystem : JobComponentSystem
     struct SearchSystemJob : IJobForEachWithEntity<Translation, actor_RunTimeComp>
     {
         public EntityCommandBuffer.Concurrent ecb;
-        [ReadOnly] public NativeHashMap<int, int> gridHashMap;
+        public NativeHashMap<int, int> gridHashMap;
         [ReadOnly] public NativeArray<int> randArray;
         [ReadOnly] public int nextIndex;
 
@@ -45,6 +45,7 @@ public class SearchSystem : JobComponentSystem
             var rockPos = GridData.FindTheRock(gridHashMap, pos, MovementJob.FindMiddlePos(pos, movementComponent.targetPos), movementComponent.targetPos, 10, 10);
             if (foundLocation.x != -1 && foundLocation.y != -1 && rockPos.x != -1)
             {
+                rockPos = new float2(rockPos.x + 0.5f, rockPos.y + 0.5f);
                 movementComponent.targetPos = rockPos;
                 Debug.Log("Updated Position to " + rockPos + "Actor is now chasing a rock");
                 var data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = rockPos, intent = 5 };
@@ -52,23 +53,30 @@ public class SearchSystem : JobComponentSystem
                 //entityManager.SetComponentData(instance, data);
                 ecb.RemoveComponent<NeedsTaskTag>(index, entity);
                 ecb.AddComponent<MovingTag>(index, entity);
+                int key = GridData.ConvertToHash((int)rockPos.x, (int)rockPos.y);
+                gridHashMap.Remove(key);
             }
             else
             {
                 if (foundLocation.x != -1 && foundLocation.y != -1)
                 {
+                    foundLocation = new float2(foundLocation.x + 0.5f, foundLocation.y + 0.5f);
                     var data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = foundLocation, intent = taskValue };
-                    movementComponent = data;
-                    //entityManager.SetComponentData(instance, data);
+                    ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                    
+                    
                     ecb.RemoveComponent<NeedsTaskTag>(index, entity);
                     ecb.AddComponent<MovingTag>(index, entity);
-            
+
+                    if (taskValue == 1)
+                    {
+                        int key = GridData.ConvertToHash((int)foundLocation.x, (int)foundLocation.y);
+                        gridHashMap.Remove(key);
+                    }
+
                 }
                 else
                 {
-                    //TODO: Get a new task!
-                    // right now it's an error though because we should always find things
-                    //ecb.AddComponent<ErrorTag>(index, entity);
                     ecb.RemoveComponent<NeedsTaskTag>(index, entity);
                     ecb.AddComponent<MovingTag>(index, entity);
                 }

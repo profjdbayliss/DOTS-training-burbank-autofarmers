@@ -2,10 +2,7 @@
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-using System.Collections.Generic;
 using UnityEngine;
-using Unity.Transforms;
-using Unity.Collections;
 
 public class GridData : MonoBehaviour
 {
@@ -13,7 +10,7 @@ public class GridData : MonoBehaviour
     const int ARRAY_MULTIPLIER = 10; // max number of statuses is 9
     const int ROCK = 1;
 
-    public static int width = 20;
+    public static int width = 50;
     public static NativeHashMap<int, int> gridStatus;
 
     public GameObject TestCubePrefab;
@@ -41,7 +38,7 @@ public class GridData : MonoBehaviour
         //float2 tmp = GridData.Search(new float2(7, 7), 5, 3);
         //Debug.Log("count that exists: " + tmp.x + " " + tmp.y);
 
-        em = World.Active.EntityManager;
+        //em = World.Active.EntityManager;
         //CreateTestEntity();
     }
 

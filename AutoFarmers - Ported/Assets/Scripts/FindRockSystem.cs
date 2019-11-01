@@ -4,6 +4,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 using static Unity.Mathematics.math;
 
 public class FindRockSystem : JobComponentSystem
@@ -36,9 +37,12 @@ public class FindRockSystem : JobComponentSystem
 			
 			for (int i = 0; i < rockCount; i++)
 			{
-			   if (rockLocations[i].Value.x == (int)translation.Value.x &&
-				rockLocations[i].Value.z == (int)translation.Value.z)
+                Debug.Log("rock locations: " + translation.Value.x + " " + translation.Value.z + 
+                    " " +rockLocations[i].Value.x + " " + rockLocations[i].Value.z );
+                if ((int)rockLocations[i].Value.x == (int)translation.Value.x &&
+				(int)rockLocations[i].Value.z == (int)translation.Value.z)
 				{
+                    Debug.Log("destroying a rock with location: " + translation.Value.x + " " + translation.Value.z);
 					ecb.AddComponent<DestroyRockTag>(i, rockEntities[i]);
 					ecb.RemoveComponent<PerformRockTaskTag>(index, entity);
                     ecb.AddComponent<NeedsTaskTag>(index, entity);

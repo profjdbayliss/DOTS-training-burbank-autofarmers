@@ -44,6 +44,8 @@ public class Movement : JobComponentSystem
 
 		public void Execute(Entity entity, int index, ref Translation translation, [ReadOnly] ref Rotation rotation, ref actor_RunTimeComp actor)
 		{
+            float tolerance = 0.2f;
+
 			// Calculate DX and DZ (y represents up, therefore we won't be using that in this case).  
 			float dx = actor.targetPos.x - translation.Value.x;
 			float dz = actor.targetPos.y - translation.Value.z;
@@ -67,8 +69,8 @@ public class Movement : JobComponentSystem
                 
    //         } 
 
-			Debug.Log(dx);
-			Debug.Log(dz);
+			//Debug.Log(dx);
+			//Debug.Log(dz);
 
 			// You should only access data that is local or that is a
 			// field on this job. Note that the 'rotation' parameter is
@@ -89,7 +91,7 @@ public class Movement : JobComponentSystem
 			if (moveXFirst)
 			{
 
-				if ((int)dx != 0)
+				if (Mathf.Abs(dx) > tolerance)
 				{
 					if (dx > 0)
 					{
@@ -102,7 +104,7 @@ public class Movement : JobComponentSystem
 						translation.Value = new float3(translation.Value.x - actor.speed * deltaTime, translation.Value.y, translation.Value.z);
 					}
 				}
-				else if ((int)dz != 0)
+				else if (Mathf.Abs(dz) > tolerance)
 				{
 					if (dz < 0)
 					{
@@ -115,12 +117,42 @@ public class Movement : JobComponentSystem
 						translation.Value = new float3(translation.Value.x, translation.Value.y, translation.Value.z + actor.speed * deltaTime);
 					}
 				}
+                else
+                {
+                    Debug.Log("At destination and was I headed to a rock1?: " + actor.intent + " " + actor.targetPos.x + " " + actor.targetPos.y);
 
-			}
+                    if (actor.intent == 5)
+                    {
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 6 };
+
+                        ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+
+                        ecb.AddComponent<PerformRockTaskTag>(index, entity);
+                        ecb.RemoveComponent<MovingTag>(index, entity);
+                    }
+                    else
+                    {
+                        if (actor.intent == 1)
+                        {
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 5 };
+                            ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                        } else
+                        {
+                            ecb.AddComponent<NeedsTaskTag>(index, entity);
+                            ecb.RemoveComponent<MovingTag>(index, entity);
+                        }
+                        
+                    }
+
+                    
+
+                }
+
+            }
 
 			else
 			{
-				if ((int)dz != 0)
+				if (Mathf.Abs(dz) > tolerance)
 				{
 					if (dz > 0)
 					{
@@ -133,7 +165,7 @@ public class Movement : JobComponentSystem
 						translation.Value = new float3(translation.Value.x, translation.Value.y, translation.Value.z - actor.speed * deltaTime);
 					}
 				}
-				else if ((int)dx != 0)
+				else if (Mathf.Abs(dx) > tolerance)
 				{
 					if (dx > 0)
 					{
@@ -154,15 +186,27 @@ public class Movement : JobComponentSystem
 
 					if (actor.intent == 5)
 					{
-                        actor.intent = 6;
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 6 };
+
+                        ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
 						ecb.AddComponent<PerformRockTaskTag>(index, entity);
-					}
+                        ecb.RemoveComponent<MovingTag>(index, entity);
+                    }
 					else
 					{
-						ecb.AddComponent<NeedsTaskTag>(index, entity);
-					}
+                        if (actor.intent == 1)
+                        {
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 5 };
+                            ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                        }
+                        else
+                        {
+                            ecb.AddComponent<NeedsTaskTag>(index, entity);
+                            ecb.RemoveComponent<MovingTag>(index, entity);
+                        }
+                    }
 
-					ecb.RemoveComponent<MovingTag>(index, entity);
+					
 
 				}
 

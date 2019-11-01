@@ -24,7 +24,6 @@ public class GridDataInitialization : MonoBehaviour
 
 	void Start()
 	{
-		
 		gridWidth = GridData.width;
         gridHeight = GridData.width;
         GenerateGrid();
