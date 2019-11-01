@@ -241,8 +241,13 @@ public class GridData : MonoBehaviour
         {
             for (int j = startY; j < endY; j++)
             {
-                hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value);
-                if (getStatus(value) == statusToFind)
+                if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                {
+                    if (getStatus(value) == statusToFind)
+                    {
+                        return new float2(i, j);
+                    }
+                } else if (statusToFind == 0)
                 {
                     return new float2(i, j);
                 }

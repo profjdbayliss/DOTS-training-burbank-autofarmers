@@ -158,6 +158,8 @@ MonoBehaviour:
     type: 3}
   StorePrefab: {fileID: 1660769586978544541, guid: fb61399e21e6d694a94f8759b74fef5c,
     type: 3}
+  TilledGroundPrefab: {fileID: 4544240577075588402, guid: 80c24559c3e39ad41bebae26f2ef5e90,
+    type: 3}
 --- !u!4 &225550044
 Transform:
   m_ObjectHideFlags: 0

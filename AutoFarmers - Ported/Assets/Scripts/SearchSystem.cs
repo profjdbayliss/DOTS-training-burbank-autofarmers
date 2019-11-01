@@ -36,13 +36,21 @@ public class SearchSystem : JobComponentSystem
         [ReadOnly] public int nextIndex;
         [ReadOnly] public int gridSize;
         [ReadOnly] public int radiusForSearch;
+        public enum Intentions : int { None = 0, Rock = 1, Till = 2, MoveToRock=5, PerformRock = 6, MoveToTill = 7, PerformTill = 8 };
 
         public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref actor_RunTimeComp movementComponent)
         {
             // set new task: should be more complicated
-            int taskValue = 1; // (randArray[(nextIndex + index) % randArray.Length] % 4) + 1;
+            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 2) + 1; // can be rock or till
             float2 pos = new float2(translation.Value.x, translation.Value.z);
-            float2 foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, taskValue, gridSize, gridSize);
+            float2 foundLocation;
+            if (taskValue == (int)Intentions.Rock) {
+                foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, taskValue, gridSize, gridSize);
+            } else
+            {
+                // we look for a default spot to put a tilled thing
+                foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, 0, gridSize, gridSize);
+            }
 
             var rockPos = GridData.FindTheRock(gridHashMap, pos, MovementJob.FindMiddlePos(pos, movementComponent.targetPos), movementComponent.targetPos, gridSize, gridSize);
             if (foundLocation.x != -1 && foundLocation.y != -1 && rockPos.x != -1)
@@ -63,18 +71,19 @@ public class SearchSystem : JobComponentSystem
                 if (foundLocation.x != -1 && foundLocation.y != -1)
                 {
                     foundLocation = new float2(foundLocation.x + 0.5f, foundLocation.y + 0.5f);
-                    var data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = foundLocation, intent = taskValue };
+                    actor_RunTimeComp data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = foundLocation, intent = taskValue };
+
                     ecb.SetComponent(index, entity, data);
                     
                     
                     ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
                     ecb.AddComponent(index, entity, typeof(MovingTag));
 
-                    if (taskValue == 1)
+                    if (taskValue == (int)Intentions.Rock)
                     {
                         int key = GridData.ConvertToHash((int)foundLocation.x, (int)foundLocation.y);
                         gridHashMap.Remove(key);
-                    }
+                    } 
 
                 }
                 else

@@ -40,10 +40,11 @@ public class Movement : JobComponentSystem
 		public float deltaTime;
 		public float2 rockPos;
 		[ReadOnly] public NativeHashMap<int, int> grid;
+        public enum Intentions : int { None = 0, Rock = 1, Till = 2, MoveToRock = 5, PerformRock = 6, MoveToTill = 7, PerformTill = 8 };
 
 
 
-		public void Execute(Entity entity, int index, ref Translation translation, [ReadOnly] ref Rotation rotation, ref actor_RunTimeComp actor)
+        public void Execute(Entity entity, int index, ref Translation translation, [ReadOnly] ref Rotation rotation, ref actor_RunTimeComp actor)
 		{
             float tolerance = 0.2f;
 
@@ -122,20 +123,33 @@ public class Movement : JobComponentSystem
                 {
                     //Debug.Log("At destination and was I headed to a rock1?: " + actor.intent + " " + actor.targetPos.x + " " + actor.targetPos.y);
 
-                    if (actor.intent == 5)
+                    if (actor.intent == (int)Intentions.MoveToRock)
                     {
-                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 6 };
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformRock};
 
                         ecb.SetComponent(index, entity, data);
 
                         ecb.AddComponent(index, entity, typeof(PerformRockTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
+                    else if (actor.intent == (int)Intentions.MoveToTill)
+                    {
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformTill };
+                        ecb.SetComponent(index, entity, data);
+
+                        ecb.AddComponent(index, entity, typeof(PerformTillTaskTag));
+                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                    }
                     else
                     {
-                        if (actor.intent == 1)
+                        if (actor.intent == (int)Intentions.Rock)
                         {
-                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 5 };
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToRock };
+                            //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                            ecb.SetComponent(index, entity, data);
+                        } else if (actor.intent == (int)Intentions.Till)
+                        {
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToTill };
                             //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
                             ecb.SetComponent(index, entity, data);
                         }
@@ -187,19 +201,32 @@ public class Movement : JobComponentSystem
 				{
 					//Debug.Log("At destination and was I headed to a rock?: " + actor.intent);
 
-					if (actor.intent == 5)
+					if (actor.intent == (int)Intentions.MoveToRock)
 					{
-                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 6 };
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformRock };
 
                         ecb.SetComponent(index, entity, data);
 						ecb.AddComponent<PerformRockTaskTag>(index, entity);
                         ecb.RemoveComponent<MovingTag>(index, entity);
                     }
-					else
+                    else if (actor.intent == (int)Intentions.MoveToTill)
+                    {
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformTill };
+
+                        ecb.SetComponent(index, entity, data);
+                        ecb.AddComponent<PerformTillTaskTag>(index, entity);
+                        ecb.RemoveComponent<MovingTag>(index, entity);
+                    }
+                    else
 					{
-                        if (actor.intent == 1)
+                        if (actor.intent == (int)Intentions.Rock)
                         {
-                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 5 };
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToRock};
+                            ecb.SetComponent(index, entity, data);
+                        }
+                        else if (actor.intent == (int)Intentions.Till)
+                        {
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToTill };
                             ecb.SetComponent(index, entity, data);
                         }
                         else

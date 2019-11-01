@@ -32,3 +32,14 @@ public struct DestroyRockTag : IComponentData
 {
 
 }
+
+public struct TilledSoilTag : IComponentData
+{
+
+}
+
+public struct PerformTillTaskTag : IComponentData
+{
+
+}
+
