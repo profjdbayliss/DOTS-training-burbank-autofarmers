@@ -28,7 +28,10 @@ public class Movement : JobComponentSystem
 	// that the Burst compiler will optimize it for the best performance.
 	[RequireComponentTag(typeof(MovingTag))]
 	[BurstCompile]
+
 	public struct MovementJob : IJobForEachWithEntity<Translation, Rotation, actor_RunTimeComp>
+
+	struct MovementJob : IJobForEachWithEntity<Translation, Rotation, actor_RunTimeComp>
 	{
 		public EntityCommandBuffer.Concurrent ecb;
 
@@ -64,10 +67,6 @@ public class Movement : JobComponentSystem
    //             }
                 
    //         } 
-			
-
-
-			
 
 			Debug.Log(dx);
 			Debug.Log(dz);

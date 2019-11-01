@@ -15,6 +15,8 @@ public class actor_authoring : MonoBehaviour, IConvertGameObjectToEntity
     // intention of actor data
     public int intent;
 
+	public int intent;
+
     
     
 
