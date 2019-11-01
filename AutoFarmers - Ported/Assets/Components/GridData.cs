@@ -42,6 +42,15 @@ public class GridData : MonoBehaviour
         //CreateTestEntity();
     }
 
+    public void OnDestroy()
+    {
+        if (gridStatus.IsCreated)
+        {
+            gridStatus.Dispose();
+
+        }
+    }
+
     public static void InitializeHashMap(int capacity)
     {
         if(gridStatus.IsCreated)

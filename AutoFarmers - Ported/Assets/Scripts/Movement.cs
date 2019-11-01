@@ -11,9 +11,10 @@ public class Movement : JobComponentSystem
 {
 	public float deltaTime;
 	public EntityCommandBufferSystem ecbs;
+    private static IComponentData data = new PerformRockTaskTag();
 
 
-	protected override void OnCreate()
+    protected override void OnCreate()
 	{
 		ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
 	}
@@ -95,12 +96,12 @@ public class Movement : JobComponentSystem
 				{
 					if (dx > 0)
 					{
-						Debug.Log("moved towards dz");
+						//Debug.Log("moved towards dz");
 						translation.Value = new float3(translation.Value.x + actor.speed * deltaTime, translation.Value.y, translation.Value.z);
 					}
 					else
 					{
-						Debug.Log("moved towards dz");
+						//Debug.Log("moved towards dz");
 						translation.Value = new float3(translation.Value.x - actor.speed * deltaTime, translation.Value.y, translation.Value.z);
 					}
 				}
@@ -108,18 +109,18 @@ public class Movement : JobComponentSystem
 				{
 					if (dz < 0)
 					{
-						Debug.Log("moved towards dx");
+						//Debug.Log("moved towards dx");
 						translation.Value = new float3(translation.Value.x, translation.Value.y, translation.Value.z - actor.speed * deltaTime);
 					}
 					else
 					{
-						Debug.Log("moved towards dx");
+						//Debug.Log("moved towards dx");
 						translation.Value = new float3(translation.Value.x, translation.Value.y, translation.Value.z + actor.speed * deltaTime);
 					}
 				}
                 else
                 {
-                    Debug.Log("At destination and was I headed to a rock1?: " + actor.intent + " " + actor.targetPos.x + " " + actor.targetPos.y);
+                    //Debug.Log("At destination and was I headed to a rock1?: " + actor.intent + " " + actor.targetPos.x + " " + actor.targetPos.y);
 
                     if (actor.intent == 5)
                     {
@@ -156,12 +157,12 @@ public class Movement : JobComponentSystem
 				{
 					if (dz > 0)
 					{
-						Debug.Log("moved towards dx");
+						//Debug.Log("moved towards dx");
 						translation.Value = new float3(translation.Value.x, translation.Value.y, translation.Value.z + actor.speed * deltaTime);
 					}
 					else
 					{
-						Debug.Log("moved towards dx");
+						//Debug.Log("moved towards dx");
 						translation.Value = new float3(translation.Value.x, translation.Value.y, translation.Value.z - actor.speed * deltaTime);
 					}
 				}
@@ -169,12 +170,12 @@ public class Movement : JobComponentSystem
 				{
 					if (dx > 0)
 					{
-						Debug.Log("moved towards dz");
+						//Debug.Log("moved towards dz");
 						translation.Value = new float3(translation.Value.x + actor.speed * deltaTime, translation.Value.y, translation.Value.z);
 					}
 					else
 					{
-						Debug.Log("moved towards dz");
+						//Debug.Log("moved towards dz");
 						translation.Value = new float3(translation.Value.x - actor.speed * deltaTime, translation.Value.y, translation.Value.z);
 
 					}
@@ -182,14 +183,14 @@ public class Movement : JobComponentSystem
 				}
 				else
 				{
-					Debug.Log("At destination and was I headed to a rock?: " + actor.intent);
+					//Debug.Log("At destination and was I headed to a rock?: " + actor.intent);
 
 					if (actor.intent == 5)
 					{
                         var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = 6 };
 
                         ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
-						ecb.AddComponent<PerformRockTaskTag>(index, entity);
+						ecb.AddComponent(index, entity, new PerformRockTaskTag());
                         ecb.RemoveComponent<MovingTag>(index, entity);
                     }
 					else

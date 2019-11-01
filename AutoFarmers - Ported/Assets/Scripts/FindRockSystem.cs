@@ -11,7 +11,7 @@ public class FindRockSystem : JobComponentSystem
 {
 	private EntityQuery m_RockQuery;
 	private EntityCommandBufferSystem ecbs;
-
+    private static IComponentData destroyRock = new DestroyRockTag();
 
 	protected override void OnCreate()
 	{
@@ -37,12 +37,12 @@ public class FindRockSystem : JobComponentSystem
 			
 			for (int i = 0; i < rockCount; i++)
 			{
-                Debug.Log("rock locations: " + translation.Value.x + " " + translation.Value.z + 
-                    " " +rockLocations[i].Value.x + " " + rockLocations[i].Value.z );
+                //Debug.Log("rock locations: " + translation.Value.x + " " + translation.Value.z + 
+                //    " " +rockLocations[i].Value.x + " " + rockLocations[i].Value.z );
                 if ((int)rockLocations[i].Value.x == (int)translation.Value.x &&
 				(int)rockLocations[i].Value.z == (int)translation.Value.z)
 				{
-                    Debug.Log("destroying a rock with location: " + translation.Value.x + " " + translation.Value.z);
+                    //Debug.Log("destroying a rock with location: " + translation.Value.x + " " + translation.Value.z);
 					ecb.AddComponent<DestroyRockTag>(i, rockEntities[i]);
 					ecb.RemoveComponent<PerformRockTaskTag>(index, entity);
                     ecb.AddComponent<NeedsTaskTag>(index, entity);

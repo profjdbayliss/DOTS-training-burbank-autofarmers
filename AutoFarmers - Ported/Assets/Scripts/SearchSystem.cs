@@ -47,7 +47,7 @@ public class SearchSystem : JobComponentSystem
             {
                 rockPos = new float2(rockPos.x + 0.5f, rockPos.y + 0.5f);
                 movementComponent.targetPos = rockPos;
-                Debug.Log("Updated Position to " + rockPos + "Actor is now chasing a rock");
+                //Debug.Log("Updated Position to " + rockPos + "Actor is now chasing a rock");
                 var data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = rockPos, intent = 5 };
                 movementComponent = data;
                 //entityManager.SetComponentData(instance, data);
