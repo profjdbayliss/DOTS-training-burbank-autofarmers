@@ -9,7 +9,9 @@ using static Unity.Mathematics.math;
 
 public class HarvestSystem : JobComponentSystem
 {
-	private EntityCommandBufferSystem ecbs;
+    static Unity.Mathematics.Random rand = new Unity.Mathematics.Random(42);
+
+    private EntityCommandBufferSystem ecbs;
 	private EntityQuery plantQuery;
 
 	protected override void OnCreate()
@@ -90,13 +92,15 @@ public class HarvestSystem : JobComponentSystem
 
 	protected override JobHandle OnUpdate(JobHandle inputDependencies)
 	{
-		var job = new HarvestSystemJob
+        int nextX = System.Math.Abs(rand.NextInt()) % (GridData.width-1);
+        int nextZ = System.Math.Abs(rand.NextInt()) % (GridData.width-1);
+        var job = new HarvestSystemJob
 		{
 			ecb = ecbs.CreateCommandBuffer().ToConcurrent(),
 			plantLocations = plantQuery.ToComponentDataArray<Translation>(Allocator.TempJob),
 			plantEntities = plantQuery.ToEntityArray(Allocator.TempJob),
 			plantCount = plantQuery.CalculateEntityCount(),
-            targetStore = GridData.Search(GridData.gridStatus, new float2(0, 0), 50, 4, GridData.width, GridData.width),
+            targetStore = GridData.Search(GridData.gridStatus, new float2(nextX, nextZ), 50, 4, GridData.width, GridData.width),
 
         // plantEntity = GridDataInitialization.plantEntity,
         grid = GridData.gridStatus.AsParallelWriter()

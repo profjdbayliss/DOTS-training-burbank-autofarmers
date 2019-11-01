@@ -40,7 +40,7 @@ public class SearchSystem : JobComponentSystem
         public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref actor_RunTimeComp movementComponent)
         {
             // set new task: should be more complicated
-            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 3) + 1; // can be rock or till
+            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 4) + 1; // can be rock or till
             float2 pos = new float2(translation.Value.x, translation.Value.z);
             float2 foundLocation;
             
@@ -58,33 +58,20 @@ public class SearchSystem : JobComponentSystem
             }
             else // till only looks at things that don't exist in the grid
             {
+                Unity.Mathematics.Random rand = new Unity.Mathematics.Random((uint)nextIndex);
                 // we look for a default spot to put a tilled thing
-                //int randomValueX = (int)(movementComponent.startPos.x - radiusForSearch);
-                //if (randomValueX < 0)
-                //{
-                //    randomValueX = 0;
-                //}
-                //else
-                //{
-                //   randomValueX  -= (randArray[nextIndex % randArray.Length] % (radiusForSearch * 2)) + 1;
-                //    if (randomValueX >=gridSize)
-                //        randomValueX = gridSize - 1;
-                //}
-                //int randomValueY = (int)(movementComponent.startPos.y - radiusForSearch);
-                //if (randomValueY < 0)
-                //{
-                //    randomValueY = 0;
-                   
-                //} else
-                //{
-                //    randomValueY -= (randArray[(nextIndex + 1) % randArray.Length] % (radiusForSearch * 2)) + 1;
-                //    if (randomValueY >= gridSize)
-                //        randomValueY = gridSize - 1;
-                //}
-                //nextIndex += 2;
-                //bool found = false;
-                foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, 0, gridSize, gridSize);
-
+                float2 nextPos = new float2(rand.NextInt() % (gridSize-1), rand.NextInt() % (gridSize-1));
+                bool found = false;
+                foundLocation = GridData.Search(gridHashMap, nextPos, radiusForSearch, 0, gridSize, gridSize);
+                int value;
+                if (gridHashMap.TryGetValue(GridData.ConvertToHash((int)nextPos.x, (int)nextPos.y), out value))
+                {
+                    //Debug.Log("random location didn't work");
+                    foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, 3, gridSize, gridSize);
+                } else
+                {
+                    //Debug.Log("random location was chosen");
+                }
                 //for (int i=0; i<10; i++)
                 //{
                 //    int value = 0;
@@ -122,7 +109,7 @@ public class SearchSystem : JobComponentSystem
                 //        Debug.Log("didn't find random location for harvest");
                 //    }
                 //}
-            } 
+            }
 
             var rockPos = GridData.FindTheRock(gridHashMap, pos, MovementJob.FindMiddlePos(pos, movementComponent.targetPos), movementComponent.targetPos, gridSize, gridSize);
             if (foundLocation.x != -1 && foundLocation.y != -1 && rockPos.x != -1)
@@ -187,7 +174,7 @@ public class SearchSystem : JobComponentSystem
         job.nextIndex = index;
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.gridSize = GridData.width;
-        job.radiusForSearch = 5;
+        job.radiusForSearch = 15;
 
         //Debug.Log("nextInt: " + (randomValues[(index) % randomValues.Length]%4 + 1));
         var jobHandle = job.ScheduleSingle(this, inputDependencies);

@@ -219,6 +219,7 @@ public class GridData : MonoBehaviour
 
     public static float2 Search(NativeHashMap<int, int> hashMap, float2 currentPos, int radius, int statusToFind, int sizeX, int sizeZ)
     {
+        Unity.Mathematics.Random rand = new Unity.Mathematics.Random((uint)currentPos.x);
         int startX = (int)currentPos.x - radius;
         int startY = (int)currentPos.y - radius;
         if (startX < 0) startX = 0;
@@ -237,19 +238,42 @@ public class GridData : MonoBehaviour
         }
 
         int value = 0;
-        for (int i = startX; i < endX; i++)
+        if (rand.NextInt() > 0)
         {
-            for (int j = startY; j < endY; j++)
+            for (int i = startX; i < endX; i++)
             {
-                if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                for (int j = startY; j < endY; j++)
                 {
-                    if (getStatus(value) == statusToFind)
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (getStatus(value) == statusToFind)
+                        {
+                            return new float2(i, j);
+                        }
+                    }
+                    else if (statusToFind == 0)
                     {
                         return new float2(i, j);
                     }
-                } else if (statusToFind == 0)
+                }
+            }
+        } else
+        {
+            for (int i = endX; i >= startX; i--)
+            {
+                for (int j = endY; j >= startY; j--)
                 {
-                    return new float2(i, j);
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (getStatus(value) == statusToFind)
+                        {
+                            return new float2(i, j);
+                        }
+                    }
+                    else if (statusToFind == 0)
+                    {
+                        return new float2(i, j);
+                    }
                 }
             }
         }
