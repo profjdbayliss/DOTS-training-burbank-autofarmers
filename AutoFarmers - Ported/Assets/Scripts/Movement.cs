@@ -31,7 +31,6 @@ public class Movement : JobComponentSystem
 
 	public struct MovementJob : IJobForEachWithEntity<Translation, Rotation, actor_RunTimeComp>
 
-	struct MovementJob : IJobForEachWithEntity<Translation, Rotation, actor_RunTimeComp>
 	{
 		public EntityCommandBuffer.Concurrent ecb;
 

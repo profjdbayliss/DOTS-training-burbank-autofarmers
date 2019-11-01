@@ -27,11 +27,11 @@ public class FindRockSystem : JobComponentSystem
 	struct FindRockSystemJob : IJobForEachWithEntity<Translation>
 	{
 		public EntityCommandBuffer.Concurrent ecb;
-		[ReadOnly] public NativeArray<Translation> rockLocations;
-		public NativeArray<Entity> rockEntities;
+		[DeallocateOnJobCompletion][ReadOnly] public NativeArray<Translation> rockLocations;
+		[DeallocateOnJobCompletion][ReadOnly]public NativeArray<Entity> rockEntities;
 		public int rockCount;
 
-		public void Execute(Entity entity, int index, ref Translation translation)
+		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation)
 		{
 			
 			for (int i = 0; i < rockCount; i++)
@@ -39,7 +39,7 @@ public class FindRockSystem : JobComponentSystem
 			   if (rockLocations[i].Value.x == (int)translation.Value.x &&
 				rockLocations[i].Value.z == (int)translation.Value.z)
 				{
-					ecb.AddComponent<DestroyRockTag>(index, rockEntities[i]);
+					ecb.AddComponent<DestroyRockTag>(i, rockEntities[i]);
 					ecb.RemoveComponent<PerformRockTaskTag>(index, entity);
 				}
 			}
