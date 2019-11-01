@@ -26,20 +26,21 @@ public class TillSystem : JobComponentSystem
 
         public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref actor_RunTimeComp movementComponent)
 		{
+            float tillBlockHeight = 0.25f;
             if (
             grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
             GridData.ConvertDataValue(2, 0)))
             {
-                float3 pos = new float3((int)translation.Value.x, 2.0f, (int)translation.Value.z);
+                float3 pos = new float3((int)translation.Value.x, tillBlockHeight, (int)translation.Value.z);
 
             var instance = ecb.Instantiate(index, tilledSoil);
             ecb.SetComponent(index, instance, new Translation { Value = pos });
             ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
 		    ecb.RemoveComponent(index, entity, typeof(PerformTillTaskTag));
-                Debug.Log("added grid tilling");
+                //Debug.Log("added grid tilling");
             } else
             {
-                Debug.Log("did not add to grid");
+                //Debug.Log("did not add to grid");
                 ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
                 ecb.RemoveComponent(index, entity, typeof(PerformTillTaskTag));
             }

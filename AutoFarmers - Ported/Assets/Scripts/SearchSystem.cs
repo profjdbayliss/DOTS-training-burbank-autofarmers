@@ -104,7 +104,7 @@ public class SearchSystem : JobComponentSystem
         job.nextIndex = index;
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.gridSize = GridData.width;
-        job.radiusForSearch = 20;
+        job.radiusForSearch = 5;
 
         //Debug.Log("nextInt: " + (randomValues[(index) % randomValues.Length]%4 + 1));
         var jobHandle = job.ScheduleSingle(this, inputDependencies);

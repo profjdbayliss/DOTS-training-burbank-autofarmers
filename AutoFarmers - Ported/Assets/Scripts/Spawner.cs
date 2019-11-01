@@ -32,10 +32,10 @@ public class Spawner : MonoBehaviour
             var position = new float3(startX, 2, startZ);
             //var position = transform.TransformPoint(new float3(0,0,0));
             entityManager.SetComponentData(instance, new Translation() { Value = position });
-            var data = new actor_RunTimeComp { startPos = new float2(startX, startZ), speed = 2, targetPos = new float2(0, 0) };
+            var data = new actor_RunTimeComp { startPos = new float2(startX, startZ), speed = 2, targetPos = new float2(startX, startZ) };
             entityManager.SetComponentData(instance, data);
             // give his first command based on the 1's in the hash
-            entityManager.AddComponentData(instance, new NeedsTaskTag());
+            entityManager.AddComponent<NeedsTaskTag>(instance);
         }
     }
 }
