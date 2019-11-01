@@ -48,3 +48,12 @@ public struct PerformPlantingTaskTag : IComponentData
 
 }
 
+public struct PlantTag : IComponentData
+{
+
+}
+
+public struct PerformHarvestTaskTag : IComponentData
+{
+
+}

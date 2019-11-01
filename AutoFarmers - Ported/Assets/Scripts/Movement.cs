@@ -40,7 +40,7 @@ public class Movement : JobComponentSystem
 		public float deltaTime;
 		public float2 rockPos;
 		[ReadOnly] public NativeHashMap<int, int> grid;
-        public enum Intentions : int { None = 0, Rock = 1, Till = 2, MoveToRock = 5, PerformRock = 6, MoveToTill = 7, PerformTill = 8 };
+        public enum Intentions : int { None = 0, Rock = 1, Till = 2, Plant=3, Store = 4, MoveToRock = 5, PerformRock = 6, MoveToTill = 7, PerformTill = 8, MoveToPlant=9, PerformPlanting = 10, MovingToStore = 11, MovingToHarvest=12, PerformHarvest=13 };
 
 
 
@@ -140,6 +140,22 @@ public class Movement : JobComponentSystem
                         ecb.AddComponent(index, entity, typeof(PerformTillTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
+                    else if (actor.intent == (int)Intentions.MoveToPlant)
+                    {
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformPlanting };
+                        ecb.SetComponent(index, entity, data);
+                        //Debug.Log("Performing plant");
+                        ecb.AddComponent(index, entity, typeof(PerformPlantingTaskTag));
+                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                    }
+                    else if (actor.intent == (int)Intentions.MovingToHarvest)
+                    {
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformHarvest };
+                        ecb.SetComponent(index, entity, data);
+                        //Debug.Log("moving to harvest plant");
+                        ecb.AddComponent(index, entity, typeof(PerformHarvestTaskTag));
+                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                    }
                     else
                     {
                         if (actor.intent == (int)Intentions.Rock)
@@ -150,6 +166,27 @@ public class Movement : JobComponentSystem
                         } else if (actor.intent == (int)Intentions.Till)
                         {
                             var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToTill };
+                            //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                            ecb.SetComponent(index, entity, data);
+                        }
+                        else if (actor.intent == (int)Intentions.Plant)
+                        {
+                            //Debug.Log("moving to plant");
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToPlant };
+                            //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                            ecb.SetComponent(index, entity, data);
+                        }
+                        else if (actor.intent == (int)Intentions.Store)
+                        {
+                            //Debug.Log("moving to plant");
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MovingToHarvest };
+                            //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                            ecb.SetComponent(index, entity, data);
+                        }
+                        else if (actor.intent == (int)Intentions.PerformHarvest)
+                        {
+                            //Debug.Log("moving to plant");
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MovingToHarvest };
                             //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
                             ecb.SetComponent(index, entity, data);
                         }
@@ -217,6 +254,14 @@ public class Movement : JobComponentSystem
                         ecb.AddComponent<PerformTillTaskTag>(index, entity);
                         ecb.RemoveComponent<MovingTag>(index, entity);
                     }
+                    else if (actor.intent == (int)Intentions.MoveToPlant)
+                    {
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformPlanting };
+
+                        ecb.SetComponent(index, entity, data);
+                        ecb.AddComponent<PerformPlantingTaskTag>(index, entity);
+                        ecb.RemoveComponent<MovingTag>(index, entity);
+                    }
                     else
 					{
                         if (actor.intent == (int)Intentions.Rock)
@@ -227,6 +272,11 @@ public class Movement : JobComponentSystem
                         else if (actor.intent == (int)Intentions.Till)
                         {
                             var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToTill };
+                            ecb.SetComponent(index, entity, data);
+                        }
+                        else if (actor.intent == (int)Intentions.Plant)
+                        {
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToPlant };
                             ecb.SetComponent(index, entity, data);
                         }
                         else

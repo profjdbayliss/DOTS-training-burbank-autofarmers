@@ -10,12 +10,13 @@ public class Spawner : MonoBehaviour
 {
 
     public GameObject Prefab;
+    public static Entity farmerEntity;
     public int farmerNumber;
 
     void Start()
     {
         // Create entity prefab from the game object hierarchy once
-        Entity prefab = GameObjectConversionUtility.ConvertGameObjectHierarchy(Prefab, World.Active);
+        farmerEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(Prefab, World.Active);
         var entityManager = World.Active.EntityManager;
 
         // Efficiently instantiate a bunch of entities from the already converted entity prefab
@@ -24,7 +25,7 @@ public class Spawner : MonoBehaviour
 
         for (int i = 0; i < farmerNumber; i++)
         {
-            var instance = entityManager.Instantiate(prefab);
+            var instance = entityManager.Instantiate(farmerEntity);
             int startX = Math.Abs(rand.NextInt()) % GridData.width;
             int startZ = Math.Abs(rand.NextInt()) % GridData.width;
 

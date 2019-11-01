@@ -30,7 +30,7 @@ public class HarvestSystem : JobComponentSystem
 		[DeallocateOnJobCompletion] [ReadOnly] public NativeArray<Translation> plantLocations;
 		[DeallocateOnJobCompletion] [ReadOnly] public NativeArray<Entity> plantEntities;
 		public int plantCount;
-
+        public float2 targetStore;
 
 		public NativeHashMap<int, int>.ParallelWriter grid;
 		[ReadOnly] public Entity plantEntity;
@@ -44,7 +44,7 @@ public class HarvestSystem : JobComponentSystem
 			{
 
 				ecb.RemoveComponent(index, entity, typeof(PerformHarvestTaskTag));
-				//Debug.Log("removed plant and added grid tilling");
+				Debug.Log("harvest system called");
 
 				//Loop through and find the plant
 				for (int i = 0; i < plantCount; i++)
@@ -52,17 +52,19 @@ public class HarvestSystem : JobComponentSystem
 					if ((int)plantLocations[i].Value.x == (int)translation.Value.x &&
 					(int)plantLocations[i].Value.z == (int)translation.Value.z)
 					{
-						//Debug.Log("found plant with location: " + translation.Value.x + " " + translation.Value.z);
-						// Search for a store
-						float2 targetStore = GridData.Search(GridData.gridStatus, new float2(plantLocations[i].Value.x, plantLocations[i].Value.z), 5, 4, GridData.width, GridData.width);
+                        //Debug.Log("found plant with location: " + translation.Value.x + " " + translation.Value.z);
+                        // Search for a store
 
-						// Set the 
-						ecb.SetComponent(i, plantEntities[i], new actor_RunTimeComp {
+                        // Set the plants 
+                        ecb.AddComponent(i, plantEntities[i], typeof(actor_RunTimeComp));
+                        ecb.SetComponent(i, plantEntities[i], new actor_RunTimeComp {
 							intent = 11, speed = 5,
 							startPos = new Unity.Mathematics.float2(plantLocations[i].Value.x, plantLocations[i].Value.z),
 							targetPos = targetStore
 						});
 						ecb.AddComponent(i, plantEntities[i], typeof(MovingTag));
+
+                        //farmer
 						ecb.SetComponent(index, entity, new actor_RunTimeComp{
 							intent = 11, speed = 5,
 							startPos = new Unity.Mathematics.float2(plantLocations[i].Value.x, plantLocations[i].Value.z),
@@ -94,8 +96,10 @@ public class HarvestSystem : JobComponentSystem
 			plantLocations = plantQuery.ToComponentDataArray<Translation>(Allocator.TempJob),
 			plantEntities = plantQuery.ToEntityArray(Allocator.TempJob),
 			plantCount = plantQuery.CalculateEntityCount(),
-			// plantEntity = GridDataInitialization.plantEntity,
-			grid = GridData.gridStatus.AsParallelWriter()
+            targetStore = GridData.Search(GridData.gridStatus, new float2(0, 0), 50, 4, GridData.width, GridData.width),
+
+        // plantEntity = GridDataInitialization.plantEntity,
+        grid = GridData.gridStatus.AsParallelWriter()
 		}.Schedule(this, inputDependencies);
 		job.Complete();
 

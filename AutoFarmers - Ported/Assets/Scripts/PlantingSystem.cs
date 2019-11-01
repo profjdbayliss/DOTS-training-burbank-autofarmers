@@ -26,8 +26,9 @@ public class PlantingSystem : JobComponentSystem
 
 		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref actor_RunTimeComp movementComponent)
 		{
-			float plantingHeight = 0.25f;
-			if (
+			float plantingHeight = 0f;
+           
+            if (
 			grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
 			GridData.ConvertDataValue(3, 0)))
 			{
@@ -37,11 +38,11 @@ public class PlantingSystem : JobComponentSystem
 				ecb.SetComponent(index, instance, new Translation { Value = pos });
 				ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
 				ecb.RemoveComponent(index, entity, typeof(PerformPlantingTaskTag));
-				//Debug.Log("added grid tilling");
+				//Debug.Log("added grid plant");
 			}
 			else
 			{
-				//Debug.Log("did not add to grid");
+				//Debug.Log("did not add to plant");
 				ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
 				ecb.RemoveComponent(index, entity, typeof(PerformPlantingTaskTag));
 			}

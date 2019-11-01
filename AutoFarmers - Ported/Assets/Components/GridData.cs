@@ -7,7 +7,7 @@ using UnityEngine;
 public class GridData : MonoBehaviour
 {
     const int BOARD_MULTIPLIER = 1000; // max board x and y size is 999
-    const int ARRAY_MULTIPLIER = 10; // max number of statuses is 9
+    const int ARRAY_MULTIPLIER = 100; // max number of statuses is 9
     const int ROCK = 1;
 
     public static int width = 50;

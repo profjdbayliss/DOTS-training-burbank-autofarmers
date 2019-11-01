@@ -19,8 +19,9 @@ public class GridDataInitialization : MonoBehaviour
 	public GameObject RockPrefab;
 	public GameObject StorePrefab;
     public GameObject TilledGroundPrefab;
+    public GameObject PlantPrefab;
 
-	EntityManager em;
+    EntityManager em;
 	Entity rockEntity;
     public static Entity tilledTileEntity;
 	public static Entity plantEntity;
@@ -40,7 +41,9 @@ public class GridDataInitialization : MonoBehaviour
 
 		rockEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(RockPrefab, World.Active);
         tilledTileEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(TilledGroundPrefab, World.Active);
-        
+        plantEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(PlantPrefab, World.Active);
+        em.AddComponent(plantEntity, typeof(PlantTag));
+
         em.AddComponentData(rockEntity, new RockTag { });
 
 

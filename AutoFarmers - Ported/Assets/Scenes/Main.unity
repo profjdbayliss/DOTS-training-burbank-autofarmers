@@ -160,6 +160,8 @@ MonoBehaviour:
     type: 3}
   TilledGroundPrefab: {fileID: 4544240577075588402, guid: 80c24559c3e39ad41bebae26f2ef5e90,
     type: 3}
+  PlantPrefab: {fileID: 6174345470540196706, guid: e9bf5dc2dd0b50e449e597280957624e,
+    type: 3}
 --- !u!4 &225550044
 Transform:
   m_ObjectHideFlags: 0
