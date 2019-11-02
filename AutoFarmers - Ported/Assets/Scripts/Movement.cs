@@ -58,30 +58,31 @@ public class Movement : JobComponentSystem
 			//bool headedToRock = false;
 			float2 currentPos = new float2(translation.Value.x, translation.Value.z);
 
-			//if (actor.intent == 1)
-			//{
-			//	rockPos = GridData.FindTheRock(grid, currentPos, FindMiddlePos(currentPos, actor.targetPos), actor.targetPos, 10, 10);
-			//	if (rockPos.x != -1)
-			//	{
-			//		actor.targetPos = rockPos;
-			//		Debug.Log("Updated Position to " + rockPos + "Actor is now chasing a rock");
-			//		headedToRock = true;
-   //                 actor.intent = 5;
-   //             }
-                
-   //         } 
+            //if (actor.intent == 1)
+            //{
+            //	rockPos = GridData.FindTheRock(grid, currentPos, FindMiddlePos(currentPos, actor.targetPos), actor.targetPos, 10, 10);
+            //	if (rockPos.x != -1)
+            //	{
+            //		actor.targetPos = rockPos;
+            //		Debug.Log("Updated Position to " + rockPos + "Actor is now chasing a rock");
+            //		headedToRock = true;
+            //                 actor.intent = 5;
+            //             }
 
-			//Debug.Log(dx);
-			//Debug.Log(dz);
+            //         } 
 
-			// You should only access data that is local or that is a
-			// field on this job. Note that the 'rotation' parameter is
-			// marked as [ReadOnly], which means it cannot be modified,
-			// but allows this job to run in parallel with other jobs
-			// that want to read Rotation component data.
-			// For example,
+            //Debug.Log(dx);
+            //Debug.Log(dz);
 
-			if (Mathf.Abs(actor.targetPos.x) < Mathf.Abs(actor.targetPos.y))
+            // You should only access data that is local or that is a
+            // field on this job. Note that the 'rotation' parameter is
+            // marked as [ReadOnly], which means it cannot be modified,
+            // but allows this job to run in parallel with other jobs
+            // that want to read Rotation component data.
+            // For example,
+
+            //Debug.Log("goal an target : " + actor.intent + " " + actor.targetPos.x + " " + actor.targetPos.y);
+            if (Mathf.Abs(actor.targetPos.x) < Mathf.Abs(actor.targetPos.y))
 			{
 				moveXFirst = true;
 			}
@@ -236,7 +237,7 @@ public class Movement : JobComponentSystem
 				}
 				else
 				{
-					//Debug.Log("At destination and was I headed to a rock?: " + actor.intent);
+					Debug.Log("At destination and was I headed to a rock?: " + actor.intent);
 
 					if (actor.intent == (int)Intentions.MoveToRock)
 					{

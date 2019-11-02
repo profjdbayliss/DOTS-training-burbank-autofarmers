@@ -39,8 +39,9 @@ public class SearchSystem : JobComponentSystem
         public enum Intentions : int { None = 0, Rock = 1, Till = 2, Plant = 3, Store=4, MoveToRock = 5, PerformRock = 6, MoveToTill = 7, PerformTill = 8, MoveToPlant = 9, PerformPlanting = 10, MovingToStore=11 };
         public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref actor_RunTimeComp movementComponent)
         {
+            Debug.Log("finding new task");
             // set new task: should be more complicated
-            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 4) + 1; // can be rock or till
+            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 3) + 1; // can be rock or till
             float2 pos = new float2(translation.Value.x, translation.Value.z);
             float2 foundLocation;
             
@@ -48,15 +49,17 @@ public class SearchSystem : JobComponentSystem
                 foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, taskValue, gridSize, gridSize);
             } else if (taskValue == (int)Intentions.Plant)
             {
+                // need to search for 2 which is the tilled soil
                 foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, 2, gridSize, gridSize);
 
             }
             else if (taskValue == (int)Intentions.Store)
             {
+                // searches for the plants to go harvest them - 3
                 foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, 3, gridSize, gridSize);
 
             }
-            else // till only looks at things that don't exist in the grid
+            else // till only looks at things that don't exist in the grid - 0
             {
                 Unity.Mathematics.Random rand = new Unity.Mathematics.Random((uint)nextIndex);
                 // we look for a default spot to put a tilled thing
@@ -68,58 +71,21 @@ public class SearchSystem : JobComponentSystem
                 {
                     //Debug.Log("random location didn't work");
                     foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, 3, gridSize, gridSize);
-                } else
-                {
-                    //Debug.Log("random location was chosen");
-                }
-                //for (int i=0; i<10; i++)
-                //{
-                //    int value = 0;
-                //    if (!gridHashMap.TryGetValue(GridData.ConvertToHash(randomValueX, randomValueY), out value))
-                //    {
-                //        found = true;
-                //        foundLocation = new float2(randomValueX, randomValueY);
-                //        break;
-                //    } else
-                //    {
-                //        if (randomValueX < 0)
-                //        {
-                //            randomValueX = 0;
-                //        }
-                //        else
-                //        {
-                //            randomValueX -= (randArray[nextIndex % randArray.Length] % (radiusForSearch * 2)) + 1;
-                //            if (randomValueX > gridSize)
-                //                randomValueX = gridSize - 1;
-                //        }
-                //        if (randomValueY < 0)
-                //        {
-                //            randomValueY = 0;
+                } 
 
-                //        }
-                //        else
-                //        {
-                //            randomValueY -= (randArray[(nextIndex + 1) % randArray.Length] % (radiusForSearch * 2)) + 1;
-                //            if (randomValueY >= gridSize)
-                //                randomValueY = gridSize - 1;
-                //        }
-                //    }
-                //    if (!found)
-                //    {
-                //        Debug.Log("didn't find random location for harvest");
-                //    }
-                //}
+                
             }
-
-            var rockPos = GridData.FindTheRock(gridHashMap, pos, MovementJob.FindMiddlePos(pos, movementComponent.targetPos), movementComponent.targetPos, gridSize, gridSize);
+            float2 findMiddle = MovementJob.FindMiddlePos(pos, foundLocation);
+            Debug.Log("Start: " + pos.x + " " + pos.y + " middle : " + findMiddle.x + " " + findMiddle.y + " target pos : " +
+                movementComponent.targetPos.x + " " + movementComponent.targetPos.y);
+            var rockPos = GridData.FindTheRock(gridHashMap, pos, MovementJob.FindMiddlePos(pos, foundLocation), foundLocation, gridSize, gridSize);
             if (foundLocation.x != -1 && foundLocation.y != -1 && rockPos.x != -1)
             {
                 rockPos = new float2(rockPos.x + 0.5f, rockPos.y + 0.5f);
                 movementComponent.targetPos = rockPos;
-                //Debug.Log("Updated Position to " + rockPos + "Actor is now chasing a rock");
+                Debug.Log("Updated Position to " + rockPos + "Actor is now chasing a rock");
                 var data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = rockPos, intent = 5 };
                 movementComponent = data;
-                //entityManager.SetComponentData(instance, data);
                 ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
                 ecb.AddComponent(index, entity, typeof(MovingTag));
                 int key = GridData.ConvertToHash((int)rockPos.x, (int)rockPos.y);
@@ -133,8 +99,9 @@ public class SearchSystem : JobComponentSystem
                     actor_RunTimeComp data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = foundLocation, intent = taskValue };
 
                     ecb.SetComponent(index, entity, data);
-                    
-                    
+
+                    Debug.Log("doing a task and about to move: " + pos.x + " " + pos.y + 
+                        " target is : " + movementComponent.targetPos.x + " " + movementComponent.targetPos.y);
                     ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
                     ecb.AddComponent(index, entity, typeof(MovingTag));
 
@@ -145,7 +112,7 @@ public class SearchSystem : JobComponentSystem
                     }
                     if (taskValue == (int)Intentions.Plant)
                     {
-                        //Debug.Log("trying to plant");
+                        
                         int key = GridData.ConvertToHash((int)foundLocation.x, (int)foundLocation.y);
                         gridHashMap.Remove(key);
                     }
@@ -158,8 +125,7 @@ public class SearchSystem : JobComponentSystem
                 }
                 else
                 {
-                    //ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
-                    //ecb.AddComponent<MovingTag>(index, entity);
+                    Debug.Log("location wasn't found - find another task");
                 }
             }
         }

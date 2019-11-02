@@ -10,7 +10,7 @@ public class GridData : MonoBehaviour
     const int ARRAY_MULTIPLIER = 100; // max number of statuses is 9
     const int ROCK = 1;
 
-    public static int width = 50;
+    public static int width = 20;
     public static NativeHashMap<int, int> gridStatus;
 
     public GameObject TestCubePrefab;
