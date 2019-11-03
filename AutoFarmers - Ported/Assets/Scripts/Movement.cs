@@ -51,6 +51,15 @@ public class Movement : JobComponentSystem
 			// Calculate DX and DZ (y represents up, therefore we won't be using that in this case).  
 			float dx = actor.targetPos.x - translation.Value.x;
 			float dz = actor.targetPos.y - translation.Value.z;
+
+            if ((int)actor.middlePos.x != -1 && (int)actor.middlePos.y != -1)
+            {
+                //Debug.Log("targetting middle" + actor.middlePos);
+                // our target is the middle pos before the target 
+                dx = actor.middlePos.x - translation.Value.x;
+                dz = actor.middlePos.y - translation.Value.z;
+            }
+
 			//the specs state that we want to move in the shortest distance first, therefore, we will perform a check to decide whether x or z is smaller
 			//move from there. 
 			bool moveXFirst;
@@ -58,18 +67,6 @@ public class Movement : JobComponentSystem
 			//bool headedToRock = false;
 			float2 currentPos = new float2(translation.Value.x, translation.Value.z);
 
-            //if (actor.intent == 1)
-            //{
-            //	rockPos = GridData.FindTheRock(grid, currentPos, FindMiddlePos(currentPos, actor.targetPos), actor.targetPos, 10, 10);
-            //	if (rockPos.x != -1)
-            //	{
-            //		actor.targetPos = rockPos;
-            //		Debug.Log("Updated Position to " + rockPos + "Actor is now chasing a rock");
-            //		headedToRock = true;
-            //                 actor.intent = 5;
-            //             }
-
-            //         } 
 
             //Debug.Log(dx);
             //Debug.Log(dz);
@@ -123,15 +120,20 @@ public class Movement : JobComponentSystem
                 else
                 {
                     //Debug.Log("At destination and was I headed to a rock1?: " + actor.intent + " " + actor.targetPos.x + " " + actor.targetPos.y);
-
-                    if (actor.intent == (int)Intentions.MoveToRock)
+                    if ((int)actor.middlePos.x != -1 && (int)actor.middlePos.y != -1)
+                    {
+                        // we just hit the middle pos and so set things to go to target now
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = actor.intent, middlePos = new float2(-1,-1) };
+                        ecb.SetComponent(index, entity, data);
+                    }
+                    else if (actor.intent == (int)Intentions.MoveToRock)
                     {
                         // need to figure out right place to put this
                         // maybe at top of the file?
                         // double check we haven't redone our path
                         //var rockPos = GridData.FindTheRock(gridHashMap, currentPos, MovementJob.FindMiddlePos(currentPos, actor.targetPos), actor.targetPos, gridSize, gridSize);
 
-                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformRock};
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformRock, middlePos = new float2(-1, -1) };
 
                         ecb.SetComponent(index, entity, data);
 
@@ -140,7 +142,7 @@ public class Movement : JobComponentSystem
                     }
                     else if (actor.intent == (int)Intentions.MoveToTill)
                     {
-                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformTill };
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformTill, middlePos = new float2(-1, -1) };
                         ecb.SetComponent(index, entity, data);
 
                         ecb.AddComponent(index, entity, typeof(PerformTillTaskTag));
@@ -148,7 +150,7 @@ public class Movement : JobComponentSystem
                     }
                     else if (actor.intent == (int)Intentions.MoveToPlant)
                     {
-                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformPlanting };
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformPlanting, middlePos = new float2(-1, -1) };
                         ecb.SetComponent(index, entity, data);
                         //Debug.Log("Performing plant");
                         ecb.AddComponent(index, entity, typeof(PerformPlantingTaskTag));
@@ -156,7 +158,7 @@ public class Movement : JobComponentSystem
                     }
                     else if (actor.intent == (int)Intentions.MovingToHarvest)
                     {
-                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformHarvest };
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformHarvest, middlePos = new float2(-1, -1) };
                         ecb.SetComponent(index, entity, data);
                         //Debug.Log("moving to harvest plant");
                         ecb.AddComponent(index, entity, typeof(PerformHarvestTaskTag));
@@ -166,33 +168,33 @@ public class Movement : JobComponentSystem
                     {
                         if (actor.intent == (int)Intentions.Rock)
                         {
-                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToRock };
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToRock, middlePos = new float2(-1, -1) };
                             //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
                             ecb.SetComponent(index, entity, data);
                         } else if (actor.intent == (int)Intentions.Till)
                         {
-                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToTill };
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToTill, middlePos = new float2(-1, -1) };
                             //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
                             ecb.SetComponent(index, entity, data);
                         }
                         else if (actor.intent == (int)Intentions.Plant)
                         {
                             //Debug.Log("moving to plant");
-                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToPlant };
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToPlant, middlePos = new float2(-1, -1) };
                             //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
                             ecb.SetComponent(index, entity, data);
                         }
                         else if (actor.intent == (int)Intentions.Store)
                         {
                             //Debug.Log("moving to plant");
-                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MovingToHarvest };
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MovingToHarvest, middlePos = new float2(-1, -1) };
                             //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
                             ecb.SetComponent(index, entity, data);
                         }
                         else if (actor.intent == (int)Intentions.PerformHarvest)
                         {
                             //Debug.Log("moving to plant");
-                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MovingToHarvest };
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MovingToHarvest, middlePos = new float2(-1, -1) };
                             //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
                             ecb.SetComponent(index, entity, data);
                         }
@@ -242,11 +244,18 @@ public class Movement : JobComponentSystem
 				}
 				else
 				{
-					Debug.Log("At destination and was I headed to a rock?: " + actor.intent);
+					//Debug.Log("At destination and was I headed to a rock?: " + actor.intent);
 
-					if (actor.intent == (int)Intentions.MoveToRock)
+                    if ((int)actor.middlePos.x != -1 && (int)actor.middlePos.y != -1)
+                    {
+                        //Debug.Log("just got to the middle" + actor.middlePos);
+                        // we just hit the middle pos and so set things to go to target now
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = actor.intent, middlePos = new float2(-1, -1) };
+                        ecb.SetComponent(index, entity, data);
+                    }
+                    else if (actor.intent == (int)Intentions.MoveToRock)
 					{
-                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformRock };
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformRock, middlePos = new float2(-1, -1) };
 
                         ecb.SetComponent(index, entity, data);
 						ecb.AddComponent<PerformRockTaskTag>(index, entity);
@@ -254,7 +263,7 @@ public class Movement : JobComponentSystem
                     }
                     else if (actor.intent == (int)Intentions.MoveToTill)
                     {
-                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformTill };
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformTill, middlePos = new float2(-1, -1) };
 
                         ecb.SetComponent(index, entity, data);
                         ecb.AddComponent<PerformTillTaskTag>(index, entity);
@@ -262,7 +271,7 @@ public class Movement : JobComponentSystem
                     }
                     else if (actor.intent == (int)Intentions.MoveToPlant)
                     {
-                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformPlanting };
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformPlanting, middlePos = new float2(-1, -1) };
 
                         ecb.SetComponent(index, entity, data);
                         ecb.AddComponent<PerformPlantingTaskTag>(index, entity);
@@ -272,17 +281,17 @@ public class Movement : JobComponentSystem
 					{
                         if (actor.intent == (int)Intentions.Rock)
                         {
-                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToRock};
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToRock, middlePos = new float2(-1, -1) };
                             ecb.SetComponent(index, entity, data);
                         }
                         else if (actor.intent == (int)Intentions.Till)
                         {
-                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToTill };
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToTill, middlePos = new float2(-1, -1) };
                             ecb.SetComponent(index, entity, data);
                         }
                         else if (actor.intent == (int)Intentions.Plant)
                         {
-                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToPlant };
+                            var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MoveToPlant, middlePos = new float2(-1, -1) };
                             ecb.SetComponent(index, entity, data);
                         }
                         else

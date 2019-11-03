@@ -112,10 +112,10 @@ public class GridData : MonoBehaviour
             {
                 for (; i >= countEnd; i--)
                 {
-                    Debug.Log("rock: " + i + " " + j + " " + value);
+                    //Debug.Log("rock: " + i + " " + j + " " + value);
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
-                        Debug.Log("found something!");
+                        //Debug.Log("found something!");
                         if (getStatus(value) == ROCK)
                         {
                             return new float2(i, j);
@@ -127,10 +127,10 @@ public class GridData : MonoBehaviour
             {
                 for (; i <= countEnd; i++)
                 {
-                    Debug.Log("rock2: " + i + " " + j + " " + value);
+                    //Debug.Log("rock2: " + i + " " + j + " " + value);
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
-                        Debug.Log("found something!");
+                        //Debug.Log("found something!");
                         
                         if (getStatus(value) == ROCK)
                         {
@@ -150,10 +150,10 @@ public class GridData : MonoBehaviour
             {
                 for (; j >= countEnd; j--)
                 {
-                    Debug.Log("rock3: " + i + " " + j + " " + value);
+                    //Debug.Log("rock3: " + i + " " + j + " " + value);
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
-                        Debug.Log("found something!");
+                        //Debug.Log("found something!");
 
                         if (getStatus(value) == ROCK)
                         {
@@ -166,10 +166,10 @@ public class GridData : MonoBehaviour
             {
                 for (; j <= countEnd; j++)
                 {
-                    Debug.Log("rock4: " + i + " " + j + " " + value);
+                   // Debug.Log("rock4: " + i + " " + j + " " + value);
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
-                        Debug.Log("found something!");
+                        //Debug.Log("found something!");
 
                         if (getStatus(value) == ROCK)
                         {
@@ -181,7 +181,7 @@ public class GridData : MonoBehaviour
  
         }
 
-        Debug.Log("part way through the method");
+        //Debug.Log("part way through the method");
 
         // no rocks on path to middle, so try path from middle to end
         startX = (int)middlePos.x;
@@ -201,7 +201,7 @@ public class GridData : MonoBehaviour
                 countEnd = endX;
                 for (; i >= countEnd; i--)
                 {
-                    Debug.Log("rock5: " + i + " " + j + " " + value);
+                    //Debug.Log("rock5: " + i + " " + j + " " + value);
 
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
@@ -217,7 +217,7 @@ public class GridData : MonoBehaviour
                 countEnd = endX;
                 for (; i <= countEnd; i++)
                 {
-                    Debug.Log("rock6: " + i + " " + j + " " + value);
+                    //Debug.Log("rock6: " + i + " " + j + " " + value);
 
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
@@ -238,7 +238,7 @@ public class GridData : MonoBehaviour
             {
                 for (; j >= countEnd; j--)
                 {
-                    Debug.Log("rock7: " + i + " " + j + " " + value);
+                    //Debug.Log("rock7: " + i + " " + j + " " + value);
 
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
@@ -253,7 +253,7 @@ public class GridData : MonoBehaviour
             {
                 for (; j <= countEnd; j++)
                 {
-                    Debug.Log("rock8: " + i + " " + j + " " + value);
+                    //Debug.Log("rock8: " + i + " " + j + " " + value);
 
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
@@ -284,22 +284,23 @@ public class GridData : MonoBehaviour
 
         int endX = (int)currentPos.x + radius+1;
         int endY = (int)currentPos.y + radius+1;
-        if (endX > sizeX)
+        if (endX >= sizeX)
         {
             endX = sizeX-1;
            
         }
-        if (endY > sizeZ)
+        if (endY >= sizeZ)
         {
             endY = sizeZ-1;
         }
 
         int value = 0;
-        if (rand.NextInt() > 0)
+        if ((Mathf.Abs(rand.NextInt())%100) > 50)
         {
-            for (int i = startX; i < endX; i++)
+            //Debug.Log("positive search position");
+            for (int i = startX; i <= endX; i++)
             {
-                for (int j = startY; j < endY; j++)
+                for (int j = startY; j <= endY; j++)
                 {
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
@@ -316,6 +317,7 @@ public class GridData : MonoBehaviour
             }
         } else
         {
+            //Debug.Log("negative search direction");
             for (int i = endX; i >= startX; i--)
             {
                 for (int j = endY; j >= startY; j--)

@@ -8,7 +8,8 @@ using UnityEngine;
 public struct actor_RunTimeComp : IComponentData
 {
     public float2 targetPos;
-    public float2 startPos; // WORK - delete this!
+    public float2 startPos;
+    public float2 middlePos;
     public float speed;
     public int intent;
 }
