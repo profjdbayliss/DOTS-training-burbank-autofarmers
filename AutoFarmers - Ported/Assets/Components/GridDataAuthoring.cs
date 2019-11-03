@@ -7,7 +7,7 @@ using Unity.Collections;
 [RequiresEntityConversion]
 public class GridDataAuthoring : MonoBehaviour, IConvertGameObjectToEntity
 {
-    public NativeArray<int> gridStatus;
+    //public NativeArray<int> gridStatus;
     // Add fields to your component here. Remember that:
     //
     // * The purpose of this class is to store data for authoring purposes - it is not for use while the game is

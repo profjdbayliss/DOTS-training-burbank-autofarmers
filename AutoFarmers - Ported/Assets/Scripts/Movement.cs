@@ -160,7 +160,7 @@ public class Movement : JobComponentSystem
                     {
                         var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformHarvest, middlePos = new float2(-1, -1) };
                         ecb.SetComponent(index, entity, data);
-                        //Debug.Log("moving to harvest plant");
+                        Debug.Log("moving to harvest plant1");
                         ecb.AddComponent(index, entity, typeof(PerformHarvestTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
@@ -186,7 +186,7 @@ public class Movement : JobComponentSystem
                         }
                         else if (actor.intent == (int)Intentions.Store)
                         {
-                            //Debug.Log("moving to plant");
+                            Debug.Log("moving to harvest");
                             var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MovingToHarvest, middlePos = new float2(-1, -1) };
                             //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
                             ecb.SetComponent(index, entity, data);
@@ -276,6 +276,28 @@ public class Movement : JobComponentSystem
                         ecb.SetComponent(index, entity, data);
                         ecb.AddComponent<PerformPlantingTaskTag>(index, entity);
                         ecb.RemoveComponent<MovingTag>(index, entity);
+                    }
+                    else if (actor.intent == (int)Intentions.MovingToHarvest)
+                    {
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformHarvest, middlePos = new float2(-1, -1) };
+                        ecb.SetComponent(index, entity, data);
+                        Debug.Log("performing harvest next");
+                        ecb.AddComponent(index, entity, typeof(PerformHarvestTaskTag));
+                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                    }
+                    else if (actor.intent == (int)Intentions.Store)
+                    {
+                        Debug.Log("moving to harvest");
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MovingToHarvest, middlePos = new float2(-1, -1) };
+                        //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                        ecb.SetComponent(index, entity, data);
+                    }
+                    else if (actor.intent == (int)Intentions.PerformHarvest)
+                    {
+                        //Debug.Log("moving to plant");
+                        var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MovingToHarvest, middlePos = new float2(-1, -1) };
+                        //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                        ecb.SetComponent(index, entity, data);
                     }
                     else
 					{

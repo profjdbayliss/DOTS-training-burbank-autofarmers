@@ -26,8 +26,8 @@ public class SellPlantSystem : JobComponentSystem
 		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref actor_RunTimeComp actor)
 		{
             float tolerance = 0.25f;
-			if (translation.Value.x - actor.targetPos.x < tolerance &&
-			    translation.Value.y - actor.targetPos.y < tolerance
+			if (Mathf.Abs(translation.Value.x - actor.targetPos.x) < tolerance &&
+			    Mathf.Abs(translation.Value.y - actor.targetPos.y) < tolerance
 					    )
 			{
 				float farmerSpawnHeight = 0.25f;
@@ -44,11 +44,11 @@ public class SellPlantSystem : JobComponentSystem
 
 				// kill this plant
 				ecb.DestroyEntity(index, entity);
-				//Debug.Log("added farmer & destroyed Plant");
+				Debug.Log("added farmer & destroyed Plant");
 			}
 			else
 			{
-				//Debug.Log("not at target location");
+				Debug.Log("not at target location");
 				return;
 			}
 

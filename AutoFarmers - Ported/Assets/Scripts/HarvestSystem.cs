@@ -9,14 +9,15 @@ using static Unity.Mathematics.math;
 
 public class HarvestSystem : JobComponentSystem
 {
-    static Unity.Mathematics.Random rand = new Unity.Mathematics.Random(42);
+    //static Unity.Mathematics.Random rand;
 
     private EntityCommandBufferSystem ecbs;
 	private EntityQuery plantQuery;
 
 	protected override void OnCreate()
 	{
-		ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
+        //rand = new Unity.Mathematics.Random(42);
+        ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
 		plantQuery = GetEntityQuery(new EntityQueryDesc
 		{
 			All = new[] { ComponentType.ReadOnly<PlantTag>(), typeof(Translation) },
@@ -39,8 +40,9 @@ public class HarvestSystem : JobComponentSystem
 
 		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref actor_RunTimeComp movementComponent)
 		{
-			//float plantingHeight = 0.25f;
-			if (
+            Debug.Log("trying to harvest");
+            //float plantingHeight = 0.25f;
+            if (
 			grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
 			GridData.ConvertDataValue(2, 0)))
 			{
@@ -81,7 +83,7 @@ public class HarvestSystem : JobComponentSystem
 
 			else
 			{
-				//Debug.Log("did not add to grid");
+				Debug.Log("did not add to grid");
 				ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
 				ecb.RemoveComponent(index, entity, typeof(PerformHarvestTaskTag));
 			}
@@ -92,8 +94,11 @@ public class HarvestSystem : JobComponentSystem
 
 	protected override JobHandle OnUpdate(JobHandle inputDependencies)
 	{
-        int nextX = System.Math.Abs(rand.NextInt()) % (GridData.width);
-        int nextZ = System.Math.Abs(rand.NextInt()) % (GridData.width);
+        //int nextX = System.Math.Abs(rand.NextInt()) % (GridData.width);
+        //int nextZ = System.Math.Abs(rand.NextInt()) % (GridData.width);
+        int nextX =  (GridData.width/2);
+        int nextZ = (GridData.width/2);
+
         var job = new HarvestSystemJob
 		{
 			ecb = ecbs.CreateCommandBuffer().ToConcurrent(),
@@ -106,7 +111,7 @@ public class HarvestSystem : JobComponentSystem
         grid = GridData.gridStatus.AsParallelWriter()
 		}.Schedule(this, inputDependencies);
 		job.Complete();
-
+        Debug.Log("scheduled harvest job");
 		return job; // job.Schedule(this, inputDependencies);
 	}
 }

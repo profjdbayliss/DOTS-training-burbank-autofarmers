@@ -42,7 +42,7 @@ public class SearchSystem : JobComponentSystem
             int TILL_RADIUS = 5;
             //Debug.Log("finding new task");
             // set new task: should be more complicated
-            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 3) + 1; // can be rock or till
+            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 4) + 1; // can be rock or till
             float2 pos = new float2(translation.Value.x, translation.Value.z);
             float2 foundLocation;
 
@@ -78,8 +78,8 @@ public class SearchSystem : JobComponentSystem
             {
                 float2 findMiddle = MovementJob.FindMiddlePos(pos, foundLocation);
                 var rockPos = GridData.FindTheRock(gridHashMap, pos, findMiddle, foundLocation, gridSize, gridSize);
-                //Debug.Log("Start: " + pos.x + " " + pos.y + " middle : " + findMiddle.x + " " + findMiddle.y + " target pos : " +
-                //    foundLocation.x + " " + foundLocation.y + " " + rockPos);
+                Debug.Log(index + " Start: " + pos.x + " " + pos.y + " middle : " + findMiddle.x + " " + findMiddle.y + " target pos : " +
+                    foundLocation.x + " " + foundLocation.y + " " + rockPos + " intention: " + taskValue);
                 if ((int)rockPos.x != -1 && (int)rockPos.y != -1)
                 {
                     // we found a rock so go mine it on the path
@@ -128,6 +128,7 @@ public class SearchSystem : JobComponentSystem
                     {
                         int key = GridData.ConvertToHash((int)foundLocation.x, (int)foundLocation.y);
                         gridHashMap.Remove(key);
+                        Debug.Log("removed plant from location" + foundLocation);
                     }
 
 

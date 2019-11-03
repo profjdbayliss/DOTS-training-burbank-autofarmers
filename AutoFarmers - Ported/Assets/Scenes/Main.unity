@@ -426,7 +426,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 6225222254032698798, guid: b57347db48292a1498f043cf8e5e9704, type: 3}
-  farmerNumber: 10
+  farmerNumber: 1
 --- !u!4 &2134749122
 Transform:
   m_ObjectHideFlags: 0
