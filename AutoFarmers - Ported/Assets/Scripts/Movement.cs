@@ -82,7 +82,7 @@ public class Movement : JobComponentSystem
             // For example,
 
             //Debug.Log("goal an target : " + actor.intent + " " + actor.targetPos.x + " " + actor.targetPos.y);
-            if (Mathf.Abs(actor.targetPos.x) < Mathf.Abs(actor.targetPos.y))
+            if (Mathf.Abs(dx) <= Mathf.Abs(dz))
 			{
 				moveXFirst = true;
 			}
@@ -126,6 +126,11 @@ public class Movement : JobComponentSystem
 
                     if (actor.intent == (int)Intentions.MoveToRock)
                     {
+                        // need to figure out right place to put this
+                        // maybe at top of the file?
+                        // double check we haven't redone our path
+                        //var rockPos = GridData.FindTheRock(gridHashMap, currentPos, MovementJob.FindMiddlePos(currentPos, actor.targetPos), actor.targetPos, gridSize, gridSize);
+
                         var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformRock};
 
                         ecb.SetComponent(index, entity, data);
@@ -302,7 +307,7 @@ public class Movement : JobComponentSystem
 			var dx = targetPos.x - currentPos.x;
 			var dz = targetPos.y - currentPos.y;
 
-			if (dx < dz)
+			if (Mathf.Abs(dx) <= Mathf.Abs(dz))
 			{
 				middlePos = new float2(currentPos.x + dx, currentPos.y);
 			}

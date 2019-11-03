@@ -63,22 +63,20 @@ public class SearchSystem : JobComponentSystem
             {
                 Unity.Mathematics.Random rand = new Unity.Mathematics.Random((uint)nextIndex);
                 // we look for a default spot to put a tilled thing
-                float2 nextPos = new float2(rand.NextInt() % (gridSize-1), rand.NextInt() % (gridSize-1));
+                float2 nextPos = new float2(rand.NextInt() % gridSize, rand.NextInt() % gridSize);
                 bool found = false;
                 foundLocation = GridData.Search(gridHashMap, nextPos, radiusForSearch, 0, gridSize, gridSize);
                 int value;
-                if (gridHashMap.TryGetValue(GridData.ConvertToHash((int)nextPos.x, (int)nextPos.y), out value))
-                {
-                    //Debug.Log("random location didn't work");
-                    foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, 3, gridSize, gridSize);
-                } 
-
-                
+                //if (gridHashMap.TryGetValue(GridData.ConvertToHash((int)nextPos.x, (int)nextPos.y), out value))
+                //{
+                //    //Debug.Log("random location didn't work");
+                //    foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, 3, gridSize, gridSize);
+                //}    
             }
             float2 findMiddle = MovementJob.FindMiddlePos(pos, foundLocation);
-            Debug.Log("Start: " + pos.x + " " + pos.y + " middle : " + findMiddle.x + " " + findMiddle.y + " target pos : " +
-                movementComponent.targetPos.x + " " + movementComponent.targetPos.y);
             var rockPos = GridData.FindTheRock(gridHashMap, pos, MovementJob.FindMiddlePos(pos, foundLocation), foundLocation, gridSize, gridSize);
+            Debug.Log("Start: " + pos.x + " " + pos.y + " middle : " + findMiddle.x + " " + findMiddle.y + " target pos : " +
+                foundLocation.x + " " + foundLocation.y + " " + rockPos);
             if (foundLocation.x != -1 && foundLocation.y != -1 && rockPos.x != -1)
             {
                 rockPos = new float2(rockPos.x + 0.5f, rockPos.y + 0.5f);
@@ -97,11 +95,10 @@ public class SearchSystem : JobComponentSystem
                 {
                     foundLocation = new float2(foundLocation.x + 0.5f, foundLocation.y + 0.5f);
                     actor_RunTimeComp data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = foundLocation, intent = taskValue };
-
                     ecb.SetComponent(index, entity, data);
-
                     Debug.Log("doing a task and about to move: " + pos.x + " " + pos.y + 
-                        " target is : " + movementComponent.targetPos.x + " " + movementComponent.targetPos.y);
+                        " target is : " + data.targetPos.x + " " + data.targetPos.y);
+                    Debug.Log("rock value: " + rockPos);
                     ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
                     ecb.AddComponent(index, entity, typeof(MovingTag));
 

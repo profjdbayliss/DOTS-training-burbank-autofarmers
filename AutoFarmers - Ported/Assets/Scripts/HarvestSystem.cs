@@ -92,8 +92,8 @@ public class HarvestSystem : JobComponentSystem
 
 	protected override JobHandle OnUpdate(JobHandle inputDependencies)
 	{
-        int nextX = System.Math.Abs(rand.NextInt()) % (GridData.width-1);
-        int nextZ = System.Math.Abs(rand.NextInt()) % (GridData.width-1);
+        int nextX = System.Math.Abs(rand.NextInt()) % (GridData.width);
+        int nextZ = System.Math.Abs(rand.NextInt()) % (GridData.width);
         var job = new HarvestSystemJob
 		{
 			ecb = ecbs.CreateCommandBuffer().ToConcurrent(),

@@ -7,8 +7,7 @@ using UnityEngine;
 public class GridData : MonoBehaviour
 {
     const int BOARD_MULTIPLIER = 1000; // max board x and y size is 999
-    const int ARRAY_MULTIPLIER = 100; // max number of statuses is 9
-    const int ROCK = 1;
+    const int ARRAY_MULTIPLIER = 100; // max number of statuses is 99
 
     public static int width = 20;
     public static NativeHashMap<int, int> gridStatus;
@@ -95,72 +94,103 @@ public class GridData : MonoBehaviour
     // assumes good data input for positions and is not checking for positions off the board
     public static float2 FindTheRock(NativeHashMap<int, int> hashMap, float2 currentPos, float2 middlePos, float2 targetPos, int sizeX, int sizeZ)
     {
+        int ROCK = 1;
         int startX = (int)currentPos.x;
         int startY = (int)currentPos.y;
         int endX = (int)middlePos.x;
         int endY = (int)middlePos.y;
 
-        int i = 0;
-        int j = 0;
+        int i = startX;
+        int j = startY;
         int countEnd = 0;
         int value = 0;
         if (endX-startX != 0)
         {
+            countEnd = endX;
             // this is the dir we're searching
             if (endX < startX)
             {
-                i = endX;
-                countEnd = startX;
+                for (; i >= countEnd; i--)
+                {
+                    Debug.Log("rock: " + i + " " + j + " " + value);
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        Debug.Log("found something!");
+                        if (getStatus(value) == ROCK)
+                        {
+                            return new float2(i, j);
+                        }
+                    }
+                }
             }
             else
             {
-                i = startX;
-                countEnd = endX;
-            }
-            j = startY;
-            for (; i < countEnd; i++)
-            { 
-                    hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value);
-                    if (getStatus(value) == ROCK)
+                for (; i <= countEnd; i++)
+                {
+                    Debug.Log("rock2: " + i + " " + j + " " + value);
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
-                        return new float2(i, j);
+                        Debug.Log("found something!");
+                        
+                        if (getStatus(value) == ROCK)
+                        {
+                            return new float2(i, j);
+                        }
                     }
+                }
             }
 
         } else
         {
             // this is the dir we're searching
+            i = startX;
+            j = startY;
+            countEnd = endY;
             if (endY < startY)
             {
-                j = endY;
-                countEnd = startY;
+                for (; j >= countEnd; j--)
+                {
+                    Debug.Log("rock3: " + i + " " + j + " " + value);
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        Debug.Log("found something!");
+
+                        if (getStatus(value) == ROCK)
+                        {
+                            return new float2(i, j);
+                        }
+                    }
+                }
             }
             else
             {
-                j = startY;
-                countEnd = endY;
-            }
-            i = startX;
-            for (; j < countEnd; j++)
-            {
-                hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value);
-                if (getStatus(value) == ROCK)
+                for (; j <= countEnd; j++)
                 {
-                    return new float2(i, j);
+                    Debug.Log("rock4: " + i + " " + j + " " + value);
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        Debug.Log("found something!");
+
+                        if (getStatus(value) == ROCK)
+                        {
+                            return new float2(i, j);
+                        }
+                    }
                 }
             }
+ 
         }
 
-
+        Debug.Log("part way through the method");
 
         // no rocks on path to middle, so try path from middle to end
         startX = (int)middlePos.x;
         startY = (int)middlePos.y;
         endX = (int)targetPos.x;
         endY = (int)targetPos.y;
-       
-        i = 0;
-        j = 0;
+
+        i = startX;
+        j = startY;
         countEnd = 0;
         value = 0;
         if (endX - startX != 0)
@@ -168,48 +198,75 @@ public class GridData : MonoBehaviour
             // this is the dir we're searching
             if (endX < startX)
             {
-                i = endX;
-                countEnd = startX;
+                countEnd = endX;
+                for (; i >= countEnd; i--)
+                {
+                    Debug.Log("rock5: " + i + " " + j + " " + value);
+
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (getStatus(value) == ROCK)
+                        {
+                            return new float2(i, j);
+                        }
+                    }
+                }
             }
             else
             {
-                i = startX;
                 countEnd = endX;
-            }
-            j = startY;
-            for (; i < countEnd; i++)
-            {
-                hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value);
-                if (getStatus(value) == ROCK)
+                for (; i <= countEnd; i++)
                 {
-                    return new float2(i, j);
+                    Debug.Log("rock6: " + i + " " + j + " " + value);
+
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (getStatus(value) == ROCK)
+                        {
+                            return new float2(i, j);
+                        }
+                    }
                 }
             }
 
         }
         else
         {
+            countEnd = endY;
             // this is the dir we're searching
             if (endY < startY)
             {
-                j = endY;
-                countEnd = startY;
+                for (; j >= countEnd; j--)
+                {
+                    Debug.Log("rock7: " + i + " " + j + " " + value);
+
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (getStatus(value) == ROCK)
+                        {
+                            return new float2(i, j);
+                        }
+                    }
+                }
             }
             else
             {
-                j = startY;
-                countEnd = endY;
-            }
-            i = startX;
-            for (; j < countEnd; j++)
-            {
-                hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value);
-                if (getStatus(value) == ROCK)
+                for (; j <= countEnd; j++)
                 {
-                    return new float2(i, j);
+                    Debug.Log("rock8: " + i + " " + j + " " + value);
+
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (getStatus(value) == ROCK)
+                        {
+                            return new float2(i, j);
+                        }
+                    }
                 }
             }
+
         }
+
 
 
 
@@ -229,12 +286,12 @@ public class GridData : MonoBehaviour
         int endY = (int)currentPos.y + radius+1;
         if (endX > sizeX)
         {
-            endX = sizeX;
+            endX = sizeX-1;
            
         }
         if (endY > sizeZ)
         {
-            endY = sizeZ;
+            endY = sizeZ-1;
         }
 
         int value = 0;
