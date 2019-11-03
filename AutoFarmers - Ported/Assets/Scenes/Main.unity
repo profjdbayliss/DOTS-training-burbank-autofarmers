@@ -150,8 +150,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b87c58f185e68b6499dd6dbe624e0a1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rockSpawnAttempts: 100
-  storeCount: 10
+  rockSpawnAttempts: 300
+  storeCount: 30
   GridGeneratorPrefab: {fileID: 1300954337284182036, guid: b90e2cae04d52f944acbc0c48fcf3957,
     type: 3}
   RockPrefab: {fileID: 8408007631743160701, guid: 3eed0651058123240bd33f559d605398,
@@ -426,7 +426,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 6225222254032698798, guid: b57347db48292a1498f043cf8e5e9704, type: 3}
-  farmerNumber: 1
+  farmerNumber: 10
 --- !u!4 &2134749122
 Transform:
   m_ObjectHideFlags: 0

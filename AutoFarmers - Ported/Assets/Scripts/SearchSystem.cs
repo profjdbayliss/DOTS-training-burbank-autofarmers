@@ -78,8 +78,8 @@ public class SearchSystem : JobComponentSystem
             {
                 float2 findMiddle = MovementJob.FindMiddlePos(pos, foundLocation);
                 var rockPos = GridData.FindTheRock(gridHashMap, pos, findMiddle, foundLocation, gridSize, gridSize);
-                Debug.Log(index + " Start: " + pos.x + " " + pos.y + " middle : " + findMiddle.x + " " + findMiddle.y + " target pos : " +
-                    foundLocation.x + " " + foundLocation.y + " " + rockPos + " intention: " + taskValue);
+                //Debug.Log(index + " Start: " + pos.x + " " + pos.y + " middle : " + findMiddle.x + " " + findMiddle.y + " target pos : " +
+                //    foundLocation.x + " " + foundLocation.y + " " + rockPos + " intention: " + taskValue);
                 if ((int)rockPos.x != -1 && (int)rockPos.y != -1)
                 {
                     // we found a rock so go mine it on the path
@@ -128,7 +128,7 @@ public class SearchSystem : JobComponentSystem
                     {
                         int key = GridData.ConvertToHash((int)foundLocation.x, (int)foundLocation.y);
                         gridHashMap.Remove(key);
-                        Debug.Log("removed plant from location" + foundLocation);
+                       // Debug.Log("removed plant from location" + foundLocation);
                     }
 
 

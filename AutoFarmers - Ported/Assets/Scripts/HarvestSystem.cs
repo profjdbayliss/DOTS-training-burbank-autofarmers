@@ -40,7 +40,7 @@ public class HarvestSystem : JobComponentSystem
 
 		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref actor_RunTimeComp movementComponent)
 		{
-            Debug.Log("trying to harvest");
+           // Debug.Log("trying to harvest");
             //float plantingHeight = 0.25f;
             if (
 			grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
@@ -48,7 +48,7 @@ public class HarvestSystem : JobComponentSystem
 			{
 
 				ecb.RemoveComponent(index, entity, typeof(PerformHarvestTaskTag));
-				Debug.Log("harvest system called");
+				//Debug.Log("harvest system called");
 
 				//Loop through and find the plant
 				for (int i = 0; i < plantCount; i++)
@@ -83,7 +83,7 @@ public class HarvestSystem : JobComponentSystem
 
 			else
 			{
-				Debug.Log("did not add to grid");
+				//Debug.Log("did not add to grid");
 				ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
 				ecb.RemoveComponent(index, entity, typeof(PerformHarvestTaskTag));
 			}
@@ -100,18 +100,19 @@ public class HarvestSystem : JobComponentSystem
         int nextZ = (GridData.width/2);
 
         var job = new HarvestSystemJob
-		{
-			ecb = ecbs.CreateCommandBuffer().ToConcurrent(),
-			plantLocations = plantQuery.ToComponentDataArray<Translation>(Allocator.TempJob),
-			plantEntities = plantQuery.ToEntityArray(Allocator.TempJob),
-			plantCount = plantQuery.CalculateEntityCount(),
+        {
+            ecb = ecbs.CreateCommandBuffer().ToConcurrent(),
+            plantLocations = plantQuery.ToComponentDataArray<Translation>(Allocator.TempJob),
+            plantEntities = plantQuery.ToEntityArray(Allocator.TempJob),
+            plantCount = plantQuery.CalculateEntityCount(),
             targetStore = GridData.Search(GridData.gridStatus, new float2(nextX, nextZ), 50, 4, GridData.width, GridData.width),
 
-        // plantEntity = GridDataInitialization.plantEntity,
-        grid = GridData.gridStatus.AsParallelWriter()
-		}.Schedule(this, inputDependencies);
-		job.Complete();
-        Debug.Log("scheduled harvest job");
-		return job; // job.Schedule(this, inputDependencies);
+            // plantEntity = GridDataInitialization.plantEntity,
+            grid = GridData.gridStatus.AsParallelWriter()
+        };
+        var jobHandle = job.ScheduleSingle(this, inputDependencies);
+        ecbs.AddJobHandleForProducer(jobHandle);
+
+		return jobHandle;
 	}
 }

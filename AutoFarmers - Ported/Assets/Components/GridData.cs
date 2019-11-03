@@ -9,7 +9,7 @@ public class GridData : MonoBehaviour
     const int BOARD_MULTIPLIER = 1000; // max board x and y size is 999
     const int ARRAY_MULTIPLIER = 100; // max number of statuses is 99
 
-    public static int width = 20;
+    public static int width = 50;
     public static NativeHashMap<int, int> gridStatus;
 
     public GameObject TestCubePrefab;

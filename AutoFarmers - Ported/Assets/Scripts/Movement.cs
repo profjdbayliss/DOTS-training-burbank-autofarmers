@@ -160,7 +160,7 @@ public class Movement : JobComponentSystem
                     {
                         var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformHarvest, middlePos = new float2(-1, -1) };
                         ecb.SetComponent(index, entity, data);
-                        Debug.Log("moving to harvest plant1");
+                        //Debug.Log("moving to harvest plant1");
                         ecb.AddComponent(index, entity, typeof(PerformHarvestTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
@@ -281,13 +281,13 @@ public class Movement : JobComponentSystem
                     {
                         var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformHarvest, middlePos = new float2(-1, -1) };
                         ecb.SetComponent(index, entity, data);
-                        Debug.Log("performing harvest next");
+                        //Debug.Log("performing harvest next");
                         ecb.AddComponent(index, entity, typeof(PerformHarvestTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
                     else if (actor.intent == (int)Intentions.Store)
                     {
-                        Debug.Log("moving to harvest");
+                        //Debug.Log("moving to harvest");
                         var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.MovingToHarvest, middlePos = new float2(-1, -1) };
                         //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
                         ecb.SetComponent(index, entity, data);

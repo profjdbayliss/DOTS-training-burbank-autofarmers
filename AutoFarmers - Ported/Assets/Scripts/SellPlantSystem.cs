@@ -44,11 +44,11 @@ public class SellPlantSystem : JobComponentSystem
 
 				// kill this plant
 				ecb.DestroyEntity(index, entity);
-				Debug.Log("added farmer & destroyed Plant");
+				//Debug.Log("added farmer & destroyed Plant");
 			}
 			else
 			{
-				Debug.Log("not at target location");
+				//Debug.Log("not at target location");
 				return;
 			}
 
@@ -62,9 +62,10 @@ public class SellPlantSystem : JobComponentSystem
 		{
 			ecb = ecbs.CreateCommandBuffer().ToConcurrent(),
 			farmer = Spawner.farmerEntity,
-		}.Schedule(this, inputDependencies);
-		job.Complete();
+		};
+        var jobHandle = job.ScheduleSingle(this, inputDependencies);
+        ecbs.AddJobHandleForProducer(jobHandle);
 
-		return job; // job.Schedule(this, inputDependencies);
+		return jobHandle; 
 	}
 }
