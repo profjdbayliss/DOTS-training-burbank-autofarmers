@@ -18,12 +18,12 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public int BoardWidth = 10;
     public int rockSpawnAttempts;
     public int storeCount;
+    public int maxFarmers;
 
     [Header("Grid Objects")]
     //public GameObject GridGeneratorPrefab;
     public GameObject RockPrefab;
     public GameObject StorePrefab;
-    public GameObject TilledGroundPrefab;
     public GameObject PlantPrefab;
     public GameObject TilePrefab;
 
@@ -42,13 +42,15 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public static int atlasWidth = 0;
     public static Texture2D atlas;
     public static int TEXTURE_NUMBER = 2;
-    public enum BlockTypes : int { Board = 0, TilledDirt = 1 };
+    public enum BoardTypes : int { Board = 0, TilledDirt = 1 };
     public static string[] names;
     public static TextureUV[] textures;
+    public static int MaxFarmers;
 
     //  renderer info
     //public static RenderMesh[] renderers;
     public static int MATERIAL_NUMBER = 1;
+    public static Mesh firstMesh;
 
     // Board rendering variables
     private NativeArray<int> blockIndices; // stores which uv's are used per block
@@ -61,12 +63,15 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         referencedPrefabs.Add(TilePrefab);
         referencedPrefabs.Add(RockPrefab);
         referencedPrefabs.Add(StorePrefab);
-        referencedPrefabs.Add(TilledGroundPrefab);
         referencedPrefabs.Add(PlantPrefab);
     }
 
 public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
+        // set up max farmers for everything else
+        MaxFarmers = maxFarmers;
+        TillSystem.InitializeTillSystem(maxFarmers);
+
         // set up mesh rendering from prefab
         MeshRenderer meshRenderer = TilePrefab.GetComponent<MeshRenderer>();
         var meshFilter = TilePrefab.GetComponent<MeshFilter>();
@@ -85,7 +90,7 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
 
         // Generate tile Entities
         rockEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(RockPrefab, World.Active);
-        tilledTileEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(TilledGroundPrefab, World.Active);
+        //tilledTileEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(TilledGroundPrefab, World.Active);
         plantEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(PlantPrefab, World.Active);
         entityManager.AddComponent(plantEntity, typeof(PlantTag));
         entityManager.AddComponentData(rockEntity, new RockTag { });
@@ -115,6 +120,7 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
             mesh2 = GenerateTerrainMesh(BoardWidth, BoardWidth, 0, 0, height);
 
             mesh = Instantiate(mesh2);
+            firstMesh = mesh;
             meshFilter.sharedMesh = mesh;
 
             var segmentEntity = conversionSystem.CreateAdditionalEntity(gameObject);
@@ -396,11 +402,11 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
 
         // DIRT
         tex = getTextureUV("blocks\\ground.png");
-        textures[(int)BlockTypes.Board] = tex;
+        textures[(int)BoardTypes.Board] = tex;
 
         // Farmland dirt - tilled
         tex = getTextureUV("blocks\\groundTilled.png");
-        textures[(int)BlockTypes.TilledDirt] = tex;
+        textures[(int)BoardTypes.TilledDirt] = tex;
 
         //Debug.Log("textures are initialized");
 

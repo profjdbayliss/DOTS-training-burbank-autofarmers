@@ -243,14 +243,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 776a6caafaf5da94e9fe1d7a365e0b0d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BoardWidth: 20
-  rockSpawnAttempts: 20
-  storeCount: 3
+  BoardWidth: 25
+  rockSpawnAttempts: 50
+  storeCount: 10
+  maxFarmers: 10
   RockPrefab: {fileID: 8408007631743160701, guid: 3eed0651058123240bd33f559d605398,
     type: 3}
   StorePrefab: {fileID: 1660769586978544541, guid: fb61399e21e6d694a94f8759b74fef5c,
-    type: 3}
-  TilledGroundPrefab: {fileID: 4544240577075588402, guid: 80c24559c3e39ad41bebae26f2ef5e90,
     type: 3}
   PlantPrefab: {fileID: 6174345470540196706, guid: e9bf5dc2dd0b50e449e597280957624e,
     type: 3}

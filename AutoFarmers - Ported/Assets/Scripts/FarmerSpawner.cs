@@ -8,7 +8,6 @@ using UnityEngine;
 
 public class FarmerSpawner : MonoBehaviour
 {
-
     public GameObject Prefab;
     public static Entity farmerEntity;
     public int farmerNumber;
