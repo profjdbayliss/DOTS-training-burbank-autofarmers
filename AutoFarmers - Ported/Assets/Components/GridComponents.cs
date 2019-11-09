@@ -3,10 +3,11 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
+
+// tag for the grid
 [Serializable]
-public struct Actor : IComponentData
+public struct GridBoard : IComponentData
 {
-    public float2 targetPosition;
-    
-    
+
 }
+

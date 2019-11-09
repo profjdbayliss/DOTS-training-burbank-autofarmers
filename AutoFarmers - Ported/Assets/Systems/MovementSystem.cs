@@ -359,13 +359,14 @@ public class Movement : JobComponentSystem
 	protected override JobHandle OnUpdate(JobHandle inputDependencies)
 	{
 		var job = new MovementJob();
+        GridData data = GridData.GetInstance();
 
 		// Assign values to the fields on your job here, so that it has
 		// everything it needs to do its work when it runs later.
 		// For example,
 		job.deltaTime = Time.deltaTime;
 		job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
-		job.grid = GridData.gridStatus;
+		job.grid = data.gridStatus;
 
 
 		// Now that the job is set up, schedule it to be run. 

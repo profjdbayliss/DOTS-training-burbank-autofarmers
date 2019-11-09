@@ -4,20 +4,27 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class GridData : MonoBehaviour
+public class GridData 
 {
+    private static GridData data = null;
+
     const int BOARD_MULTIPLIER = 1000; // max board x and y size is 999
     const int ARRAY_MULTIPLIER = 100; // max number of statuses is 99
 
-    public static int width = 50;
-    public static NativeHashMap<int, int> gridStatus;
+    public int width = 10;
+    public NativeHashMap<int, int> gridStatus;
 
-    public GameObject TestCubePrefab;
-    EntityManager em;
-
-    public void Awake()
+    public static GridData GetInstance()
     {
-        gridStatus = new NativeHashMap<int, int>(width*width, Allocator.Persistent);
+        if (data != null)
+        {
+            return data;
+        } else
+        {
+            data = new GridData();
+            return data;
+        }
+        
 
         //gridStatus.TryAdd(ConvertToHash(5, 4), ConvertDataValue(2, 1));
         //gridStatus.TryAdd(ConvertToHash(8, 5), ConvertDataValue(2, 2));
@@ -41,6 +48,7 @@ public class GridData : MonoBehaviour
         //CreateTestEntity();
     }
 
+
     public void OnDestroy()
     {
         if (gridStatus.IsCreated)
@@ -50,7 +58,7 @@ public class GridData : MonoBehaviour
         }
     }
 
-    public static void InitializeHashMap(int capacity)
+    public void Initialize(int capacity)
     {
         if(gridStatus.IsCreated)
         {
@@ -58,7 +66,7 @@ public class GridData : MonoBehaviour
         }
 
         gridStatus = new NativeHashMap<int, int>(capacity, Allocator.Persistent);
-
+        this.width = capacity;
     }
 
     public static int ConvertToHash(int row, int col)
@@ -339,14 +347,4 @@ public class GridData : MonoBehaviour
         return new float2(-1, -1);
     }
 
-
-
-    void CreateTestEntity()
-    {
-        Entity testEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(TestCubePrefab, World.Active);
-        em.AddComponentData(testEntity, new NeedsTaskTag { });
-        //em.AddComponentData(testEntity, Translation {Value = new float3(5,0,5) });
-        em.AddComponentData(testEntity, new Actor {targetPosition = new float2(0,0) });
-        em.Instantiate(testEntity);
-    }
 }

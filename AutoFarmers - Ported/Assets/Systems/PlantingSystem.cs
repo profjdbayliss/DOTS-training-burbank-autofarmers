@@ -53,11 +53,12 @@ public class PlantingSystem : JobComponentSystem
 
 	protected override JobHandle OnUpdate(JobHandle inputDependencies)
 	{
+        GridData data = GridData.GetInstance();
         var job = new PlantingSystemJob
         {
             ecb = ecbs.CreateCommandBuffer().ToConcurrent(),
             plantEntity = GridDataInitialization.plantEntity,
-            grid = GridData.gridStatus.AsParallelWriter()
+            grid = data.gridStatus.AsParallelWriter()
         };
         var jobHandle = job.ScheduleSingle(this, inputDependencies);
         ecbs.AddJobHandleForProducer(jobHandle);

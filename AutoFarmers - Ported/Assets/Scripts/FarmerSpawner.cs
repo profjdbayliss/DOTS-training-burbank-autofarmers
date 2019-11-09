@@ -6,7 +6,7 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
-public class Spawner : MonoBehaviour
+public class FarmerSpawner : MonoBehaviour
 {
 
     public GameObject Prefab;
@@ -22,12 +22,13 @@ public class Spawner : MonoBehaviour
         // Efficiently instantiate a bunch of entities from the already converted entity prefab
         
         Unity.Mathematics.Random rand = new Unity.Mathematics.Random(42);
+        GridData gdata = GridData.GetInstance();
 
         for (int i = 0; i < farmerNumber; i++)
         {
             var instance = entityManager.Instantiate(farmerEntity);
-            int startX = Math.Abs(rand.NextInt()) % GridData.width;
-            int startZ = Math.Abs(rand.NextInt()) % GridData.width;
+            int startX = Math.Abs(rand.NextInt()) % gdata.width;
+            int startZ = Math.Abs(rand.NextInt()) % gdata.width;
 
             // Place the instantiated entity in a grid with some noise
             var position = new float3(startX, 2, startZ);

@@ -96,8 +96,9 @@ public class HarvestSystem : JobComponentSystem
 	{
         //int nextX = System.Math.Abs(rand.NextInt()) % (GridData.width);
         //int nextZ = System.Math.Abs(rand.NextInt()) % (GridData.width);
-        int nextX =  (GridData.width/2);
-        int nextZ = (GridData.width/2);
+        GridData data = GridData.GetInstance();
+        int nextX =  (data.width/2);
+        int nextZ = (data.width/2);
 
         var job = new HarvestSystemJob
         {
@@ -105,10 +106,10 @@ public class HarvestSystem : JobComponentSystem
             plantLocations = plantQuery.ToComponentDataArray<Translation>(Allocator.TempJob),
             plantEntities = plantQuery.ToEntityArray(Allocator.TempJob),
             plantCount = plantQuery.CalculateEntityCount(),
-            targetStore = GridData.Search(GridData.gridStatus, new float2(nextX, nextZ), 50, 4, GridData.width, GridData.width),
+            targetStore = GridData.Search(data.gridStatus, new float2(nextX, nextZ), 50, 4, data.width, data.width),
 
             // plantEntity = GridDataInitialization.plantEntity,
-            grid = GridData.gridStatus.AsParallelWriter()
+            grid = data.gridStatus.AsParallelWriter()
         };
         var jobHandle = job.ScheduleSingle(this, inputDependencies);
         ecbs.AddJobHandleForProducer(jobHandle);

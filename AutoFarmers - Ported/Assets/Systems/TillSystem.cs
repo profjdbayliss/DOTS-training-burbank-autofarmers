@@ -51,11 +51,12 @@ public class TillSystem : JobComponentSystem
 
 	protected override JobHandle OnUpdate(JobHandle inputDependencies)
 	{
+        GridData data = GridData.GetInstance();
         var job = new TillSystemJob
         {
             ecb = ecbs.CreateCommandBuffer().ToConcurrent(),
             tilledSoil = GridDataInitialization.tilledTileEntity,
-            grid = GridData.gridStatus.AsParallelWriter()
+            grid = data.gridStatus.AsParallelWriter()
             }.Schedule(this, inputDependencies);
         job.Complete();
 

@@ -61,7 +61,7 @@ public class SellPlantSystem : JobComponentSystem
 		var job = new SellPlantSystemJob
 		{
 			ecb = ecbs.CreateCommandBuffer().ToConcurrent(),
-			farmer = Spawner.farmerEntity,
+			farmer = FarmerSpawner.farmerEntity,
 		};
         var jobHandle = job.ScheduleSingle(this, inputDependencies);
         ecbs.AddJobHandleForProducer(jobHandle);

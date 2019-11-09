@@ -143,13 +143,14 @@ public class SearchSystem : JobComponentSystem
 
     protected override JobHandle OnUpdate(JobHandle inputDependencies)
     {
+        GridData data = GridData.GetInstance();
         int index = System.Math.Abs(rand.NextInt()) % randomValues.Length;
         var job = new SearchSystemJob();
-        job.gridHashMap = GridData.gridStatus;
+        job.gridHashMap = data.gridStatus;
         job.randArray = randomValues;
         job.nextIndex = index;
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
-        job.gridSize = GridData.width;
+        job.gridSize = data.width;
         job.radiusForSearch = 15;
 
         //Debug.Log("nextInt: " + (randomValues[(index) % randomValues.Length]%4 + 1));
