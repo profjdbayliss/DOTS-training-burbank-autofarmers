@@ -34,12 +34,6 @@ public struct RockTag : IComponentData
 }
 
 [Serializable]
-public struct DestroyRockTag : IComponentData
-{
-
-}
-
-[Serializable]
 public struct TilledSoilTag : IComponentData
 {
 

@@ -11,7 +11,6 @@ public class FindRockSystem : JobComponentSystem
 {
 	private EntityQuery m_RockQuery;
 	private EntityCommandBufferSystem ecbs;
-    private static DestroyRockTag destroy = new DestroyRockTag();
 
 	protected override void OnCreate()
 	{
@@ -43,8 +42,9 @@ public class FindRockSystem : JobComponentSystem
 				(int)rockLocations[i].Value.z == (int)translation.Value.z)
 				{
                     //Debug.Log("destroying a rock with location: " + translation.Value.x + " " + translation.Value.z);
-					ecb.AddComponent(i, rockEntities[i], typeof(DestroyRockTag));
-					ecb.RemoveComponent(index, entity, typeof(PerformRockTaskTag));
+					//ecb.AddComponent(i, rockEntities[i], typeof(DestroyRockTag));
+                    ecb.DestroyEntity(i, rockEntities[i]);
+                    ecb.RemoveComponent(index, entity, typeof(PerformRockTaskTag));
                     ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
                 }
 			}

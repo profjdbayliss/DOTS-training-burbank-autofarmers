@@ -95,18 +95,9 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
         CreateTextures();
 
         // the texture indices in the world
-        blockIndices = new NativeArray<int>(BoardWidth * BoardWidth, Allocator.Persistent);
-        for (int i = 0; i < blockIndices.Length; i++)
-        {
-            if (i % 2 == 0)
-            {
-                blockIndices[i] = 1;
-            }
-            else
-            {
-                blockIndices[i] = 0;
-            }
-        }
+        // clearing memory gives everything the first image in the uv's, 
+        // which is conveniently non-tilled ground
+        blockIndices = new NativeArray<int>(BoardWidth * BoardWidth, Allocator.Persistent, NativeArrayOptions.ClearMemory);
         
         // initialize hash table that stores all the tile state info
         GridData data = GridData.GetInstance();
@@ -414,7 +405,6 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
         //Debug.Log("textures are initialized");
 
     }
-
 
     // generates the full tile mesh in pieces
     public Mesh GenerateTerrainMesh(int width, int depth, int startX, int startZ, int height)
