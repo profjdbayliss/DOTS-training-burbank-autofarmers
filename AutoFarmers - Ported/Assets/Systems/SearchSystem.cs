@@ -42,7 +42,7 @@ public class SearchSystem : JobComponentSystem
             int TILL_RADIUS = 5;
             // set new task: should be more complicated
             int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 3) + 1;
-            Debug.Log("finding new task : " + taskValue);
+            //Debug.Log("finding new task : " + taskValue);
             float2 pos = new float2(translation.Value.x, translation.Value.z);
             float2 foundLocation;
 
@@ -136,7 +136,7 @@ public class SearchSystem : JobComponentSystem
             }
             else
             {
-                Debug.Log("location wasn't found - find another task");
+               // Debug.Log("location wasn't found - find another task");
             }
         }
     }

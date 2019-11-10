@@ -18,16 +18,16 @@ public class PlantingSystem : JobComponentSystem
 
 	[BurstCompile]
 	[RequireComponentTag(typeof(PerformPlantingTaskTag))]
-	struct PlantingSystemJob : IJobForEachWithEntity<Translation, actor_RunTimeComp>
+	struct PlantingSystemJob : IJobForEachWithEntity<Translation, Rotation, actor_RunTimeComp>
 	{
 		public EntityCommandBuffer.Concurrent ecb;
 		public NativeHashMap<int, int>.ParallelWriter grid;
 		[ReadOnly] public Entity plantEntity;
 
-		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref actor_RunTimeComp movementComponent)
+		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref Rotation rotation, ref actor_RunTimeComp movementComponent)
 		{
-			float plantingHeight = 0f;
-           
+			float plantingHeight = 1.0f;
+
             if (
 			grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
 			GridData.ConvertDataValue(3, 0)))
@@ -36,7 +36,13 @@ public class PlantingSystem : JobComponentSystem
 
 				var instance = ecb.Instantiate(index, plantEntity);
 				ecb.SetComponent(index, instance, new Translation { Value = pos });
-				ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                ecb.SetComponent(index, instance, new NonUniformScale { Value = new float3(1.0f, 1.0f, 1.0f) });
+                // for some reason the plant mesh creation happens on the wrong axis, 
+                // so we have to rotate it 90 degrees
+                var newRot = rotation.Value * Quaternion.Euler(0, 0, 90); 
+                ecb.SetComponent(index, instance, new Rotation { Value = newRot });
+                ecb.SetComponent(index, instance, new PlantComponent { timeGrown = 0 });
+                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
 				ecb.RemoveComponent(index, entity, typeof(PerformPlantingTaskTag));
 				//Debug.Log("added grid plant");
 			}

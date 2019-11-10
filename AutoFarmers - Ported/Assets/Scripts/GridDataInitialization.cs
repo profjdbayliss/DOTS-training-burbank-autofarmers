@@ -25,9 +25,10 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     //public GameObject GridGeneratorPrefab;
     public GameObject RockPrefab;
     public GameObject StorePrefab;
-    public GameObject PlantPrefab;
+    public GameObject PlantMeshPrefab;
     public GameObject TilePrefab;
     public GameObject FarmerPrefab;
+    //public Material plantMaterial;
 
     EntityManager entityManager;
     Entity rockEntity;
@@ -50,6 +51,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public static TextureUV[] textures;
     public static int MaxFarmers;
     public static int BoardWidth;
+    public static Mesh plantMesh;
 
     //  renderer info
     //public static RenderMesh[] renderers;
@@ -67,7 +69,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         referencedPrefabs.Add(TilePrefab);
         referencedPrefabs.Add(RockPrefab);
         referencedPrefabs.Add(StorePrefab);
-        referencedPrefabs.Add(PlantPrefab);
+        referencedPrefabs.Add(PlantMeshPrefab);
     }
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
@@ -96,14 +98,31 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
 
         // Generate tile Entities
         rockEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(RockPrefab, World.Active);
-        //tilledTileEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(TilledGroundPrefab, World.Active);
-        plantEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(PlantPrefab, World.Active);
-        entityManager.AddComponent(plantEntity, typeof(PlantTag));
         entityManager.AddComponentData(rockEntity, new RockTag { });
 
+        //tilledTileEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(TilledGroundPrefab, World.Active);
 
-    // create atlas and texture info
-    CreateAtlasData();
+
+        // generate the first plant to use for everything
+        plantMesh = GeneratePlantMesh(42);
+        MeshRenderer meshPlantRenderer = PlantMeshPrefab.GetComponent<MeshRenderer>();
+        var meshPlantFilter = PlantMeshPrefab.GetComponent<MeshFilter>();
+        var meshPlantTmp = meshPlantFilter.sharedMesh;
+        //meshPlantRenderer.GetSharedMaterials(materials);
+        meshPlantTmp = Instantiate(plantMesh);
+        meshPlantFilter.sharedMesh = meshPlantTmp;
+        plantEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(PlantMeshPrefab, World.Active);
+        PlantComponent plantData = new PlantComponent
+        {
+           timeGrown = 0
+        };
+        entityManager.AddComponent(plantEntity, typeof(PlantTag));
+        entityManager.SetComponentData(plantEntity, new Translation { Value = new float3(-1, -5, -1) });
+        entityManager.AddComponentData(plantEntity, plantData);
+        entityManager.AddComponentData(plantEntity, new NonUniformScale { Value = new float3(1.0f, 2.0f, 1.0f) });
+
+        // create atlas and texture info
+        CreateAtlasData();
         CreateTextures();
 
         // the texture indices in the world
@@ -590,12 +609,95 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         }
     }
 
+    Mesh GeneratePlantMesh(int seed)
+    {
+        UnityEngine.Random.State oldRandState = UnityEngine.Random.state;
+        UnityEngine.Random.InitState(seed);
+
+        List<Vector3> vertices = new List<Vector3>();
+        List<int> triangles = new List<int>();
+        List<Color> colors = new List<Color>();
+        List<Vector2> uv = new List<Vector2>();
+
+        Color color1 = UnityEngine.Random.ColorHSV(0f, 1f, .5f, .8f, .25f, .9f);
+        Color color2 = UnityEngine.Random.ColorHSV(0f, 1f, .5f, .8f, .25f, .9f);
+
+        float height = UnityEngine.Random.Range(.4f, 1.4f);
+
+        float angle = UnityEngine.Random.value * Mathf.PI * 2f;
+        float armLength1 = UnityEngine.Random.value * .4f + .1f;
+        float armLength2 = UnityEngine.Random.value * .4f + .1f;
+        float armRaise1 = UnityEngine.Random.value * .3f;
+        float armRaise2 = UnityEngine.Random.value * .6f - .3f;
+        float armWidth1 = UnityEngine.Random.value * .5f + .2f;
+        float armWidth2 = UnityEngine.Random.value * .5f + .2f;
+        float armJitter1 = UnityEngine.Random.value * .3f;
+        float armJitter2 = UnityEngine.Random.value * .3f;
+        float stalkWaveStr = UnityEngine.Random.value * .5f;
+        float stalkWaveFreq = UnityEngine.Random.Range(.25f, 1f);
+        float stalkWaveOffset = UnityEngine.Random.value * Mathf.PI * 2f;
+
+        int triCount = UnityEngine.Random.Range(15, 35);
+
+        for (int i = 0; i < triCount; i++)
+        {
+            // front face
+            triangles.Add(vertices.Count);
+            triangles.Add(vertices.Count + 1);
+            triangles.Add(vertices.Count + 2);
+
+            // back face
+            triangles.Add(vertices.Count + 1);
+            triangles.Add(vertices.Count);
+            triangles.Add(vertices.Count + 2);
+
+            float t = i / (triCount - 1f);
+            float armLength = Mathf.Lerp(armLength1, armLength2, t);
+            float armRaise = Mathf.Lerp(armRaise1, armRaise2, t);
+            float armWidth = Mathf.Lerp(armWidth1, armWidth2, t);
+            float armJitter = Mathf.Lerp(armJitter1, armJitter2, t);
+            float stalkWave = Mathf.Sin(t * stalkWaveFreq * 2f * Mathf.PI + stalkWaveOffset) * stalkWaveStr;
+
+            float y = t * height;
+            vertices.Add(new Vector3(stalkWave, y, 0f));
+            Vector3 armPos = new Vector3(stalkWave + Mathf.Cos(angle) * armLength, y + armRaise, Mathf.Sin(angle) * armLength);
+            vertices.Add(armPos + UnityEngine.Random.insideUnitSphere * armJitter);
+            armPos = new Vector3(stalkWave + Mathf.Cos(angle + armWidth) * armLength, y + armRaise, Mathf.Sin(angle + armWidth) * armLength);
+            vertices.Add(armPos + UnityEngine.Random.insideUnitSphere * armJitter);
+
+            colors.Add(color1);
+            colors.Add(color2);
+            colors.Add(color2);
+            uv.Add(Vector2.zero);
+            uv.Add(Vector2.right);
+            uv.Add(Vector2.right);
+
+            // golden angle in radians
+            angle += 2.4f;
+        }
+
+        Mesh outputMesh = new Mesh();
+        outputMesh.name = "Generated Plant (" + seed + ")";
+
+        outputMesh.SetVertices(vertices);
+        outputMesh.SetColors(colors);
+        outputMesh.SetTriangles(triangles, 0);
+        outputMesh.RecalculateNormals();
+
+        // TO FIX: need to register index somewhere - maybe with the hash table?
+        //meshLookup.Add(seed, outputMesh);
+
+        //Farm.RegisterSeed(seed);
+        UnityEngine.Random.state = oldRandState;
+        return outputMesh;
+    }
+
     public static Mesh getMesh(int x, int z, int width)
     {
         int maxX = width / MAX_MESH_WIDTH;
         int xIndex = x / MAX_MESH_WIDTH;
         int zIndex = z / MAX_MESH_WIDTH;
-        Debug.Log("mesh element at: " + (zIndex + (maxX + 1) * xIndex));
+        //Debug.Log("mesh element at: " + (zIndex + (maxX + 1) * xIndex));
         // only one mesh
         return allMeshes[zIndex + (maxX+1) * xIndex];
 
