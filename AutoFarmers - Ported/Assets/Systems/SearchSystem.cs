@@ -36,13 +36,13 @@ public class SearchSystem : JobComponentSystem
         [ReadOnly] public int nextIndex;
         [ReadOnly] public int gridSize;
         [ReadOnly] public int radiusForSearch;
-        public enum Intentions : int { None = 0, Rock = 1, Till = 2, Plant = 3, Store = 4, MoveToRock = 5, PerformRock = 6, MoveToTill = 7, PerformTill = 8, MoveToPlant = 9, PerformPlanting = 10, MovingToStore = 11 };
+        public enum Intentions : int { None = 0, Rock = 1, Till = 2, Plant = 3, Store = 4, PerformRock = 5, PerformTill = 6, PerformPlanting = 7, MovingToStore = 11 };
         public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref actor_RunTimeComp movementComponent)
         {
             int TILL_RADIUS = 5;
-            //Debug.Log("finding new task");
             // set new task: should be more complicated
-            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 4) + 1; // can be rock or till
+            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 3) + 1;
+            Debug.Log("finding new task : " + taskValue);
             float2 pos = new float2(translation.Value.x, translation.Value.z);
             float2 foundLocation;
 
@@ -136,7 +136,7 @@ public class SearchSystem : JobComponentSystem
             }
             else
             {
-                //Debug.Log("location wasn't found - find another task");
+                Debug.Log("location wasn't found - find another task");
             }
         }
     }

@@ -58,6 +58,8 @@ public class GridData
         }
     }
 
+    // the board width is the capacity and needs to be multiplied by itself
+    // to get the true every space capacity
     public void Initialize(int capacity)
     {
         if(gridStatus.IsCreated)
@@ -65,7 +67,7 @@ public class GridData
             gridStatus.Dispose();
         }
 
-        gridStatus = new NativeHashMap<int, int>(capacity, Allocator.Persistent);
+        gridStatus = new NativeHashMap<int, int>(capacity*capacity, Allocator.Persistent);
         this.width = capacity;
     }
 
@@ -284,7 +286,16 @@ public class GridData
 
     public static float2 Search(NativeHashMap<int, int> hashMap, float2 currentPos, int radius, int statusToFind, int sizeX, int sizeZ)
     {
-        Unity.Mathematics.Random rand = new Unity.Mathematics.Random((uint)currentPos.x);
+        Unity.Mathematics.Random rand;
+        if ((uint)currentPos.x == 0)
+        {
+            rand = new Unity.Mathematics.Random(10);
+        }
+        else
+        {
+            rand = new Unity.Mathematics.Random((uint)currentPos.x);
+        }
+        
         int startX = (int)currentPos.x - radius;
         int startY = (int)currentPos.y - radius;
         if (startX < 0) startX = 0;

@@ -72,18 +72,16 @@ public class TillSystem : JobComponentSystem
 
                 //var instance = ecb.Instantiate(index, tilledSoil);
                 //ecb.SetComponent(index, instance, new Translation { Value = pos });
-                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                ecb.RemoveComponent(index, entity, typeof(PerformTillTaskTag));
                 //Debug.Log("added grid tilling");
             }
-            else
-            {
-                //Debug.Log("did not add to grid");
-                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                ecb.RemoveComponent(index, entity, typeof(PerformTillTaskTag));
-            }
-
-
+            //else
+            //{
+            //    //Debug.Log("did not add to grid");
+            //    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+            //    ecb.RemoveComponent(index, entity, typeof(PerformTillTaskTag));
+            //}
+            ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+            ecb.RemoveComponent(index, entity, typeof(PerformTillTaskTag));
         }
     }
 

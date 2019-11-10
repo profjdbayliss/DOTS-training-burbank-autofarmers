@@ -33,7 +33,7 @@ public class FindRockSystem : JobComponentSystem
 
 		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation)
 		{
-			
+            //Debug.Log("inside of perform rock");
 			for (int i = 0; i < rockCount; i++)
 			{
                 //Debug.Log("rock locations: " + translation.Value.x + " " + translation.Value.z + 
