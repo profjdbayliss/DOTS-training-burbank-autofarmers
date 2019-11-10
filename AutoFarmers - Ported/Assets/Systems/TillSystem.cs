@@ -107,11 +107,19 @@ public class TillSystem : JobComponentSystem
                 float2 pos = tillChanges[i];
                 if ((int)pos.x != -1 && (int)pos.y != -1)
                 {
-                    //Debug.Log("changing uv at! " + pos);
                     // set the uv's on the mesh
-                    Vector2[] uv = GridDataInitialization.firstMesh.uv;
+                    // NOTE: setting pos to be a specific number is helpful for testing
+                    Mesh tmp = GridDataInitialization.getMesh((int)pos.x, (int)pos.y,
+                        GridDataInitialization.BoardWidth);
+                    int width = GridDataInitialization.getMeshWidth(tmp, (int)pos.x,
+                        (int)pos.y, GridDataInitialization.BoardWidth);
+                    //Debug.Log("changing uv at! " + pos + " " + width );
+                   
+                    Vector2[] uv = tmp.uv;
                     TextureUV tex = GridDataInitialization.textures[(int)GridDataInitialization.BoardTypes.TilledDirt];
-                    int uvStartIndex = ((int)pos.y + 25 * (int)pos.x) * 4;
+                    int uvStartIndex = (GridDataInitialization.getPosForMesh((int)pos.y) +
+                        width * 
+                        GridDataInitialization.getPosForMesh((int)pos.x)) * 4;
                     uv[uvStartIndex] = new float2(tex.pixelStartX,
                         tex.pixelStartY);
                     uv[uvStartIndex + 1] = new float2(tex.pixelStartX,
@@ -122,7 +130,8 @@ public class TillSystem : JobComponentSystem
                         tex.pixelStartY);
                     // then set the pos back to -1's
                     tillChanges[i] = new float2(-1, -1);
-                    GridDataInitialization.firstMesh.SetUVs(0, uv);
+                    tmp.SetUVs(0, uv);
+                    tmp.MarkModified();
                 }
                 hasChanged[0] = 0;
             }

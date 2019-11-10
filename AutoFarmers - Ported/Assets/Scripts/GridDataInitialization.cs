@@ -15,7 +15,7 @@ using System;
 public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity, IDeclareReferencedPrefabs
 {
     [Header("Grid Parameters")]
-    public int BoardWidth = 10;
+    public int boardWidth = 10;
     public int rockSpawnAttempts;
     public int storeCount;
     public int maxFarmers;
@@ -46,11 +46,12 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public static string[] names;
     public static TextureUV[] textures;
     public static int MaxFarmers;
+    public static int BoardWidth;
 
     //  renderer info
     //public static RenderMesh[] renderers;
     public static int MATERIAL_NUMBER = 1;
-    public static Mesh firstMesh;
+    public static Mesh[] allMeshes;
 
     // Board rendering variables
     private NativeArray<int> blockIndices; // stores which uv's are used per block
@@ -66,10 +67,12 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         referencedPrefabs.Add(PlantPrefab);
     }
 
-public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
+    public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
         // set up max farmers for everything else
         MaxFarmers = maxFarmers;
+        BoardWidth = boardWidth;
+        Debug.Log("board width is : " + BoardWidth);
         TillSystem.InitializeTillSystem(maxFarmers);
 
         // set up mesh rendering from prefab
@@ -103,15 +106,18 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
         // clearing memory gives everything the first image in the uv's, 
         // which is conveniently non-tilled ground
         blockIndices = new NativeArray<int>(BoardWidth * BoardWidth, Allocator.Persistent, NativeArrayOptions.ClearMemory);
-        
+
         // initialize hash table that stores all the tile state info
         GridData data = GridData.GetInstance();
         data.Initialize(BoardWidth);
-        
+
         // generate the terrain mesh and add it to the world
         Mesh mesh2;
         int maxX = BoardWidth / MAX_MESH_WIDTH;
         int maxZ = BoardWidth / MAX_MESH_WIDTH;
+        // only one mesh
+        allMeshes = new Mesh[(maxX + 1) * (maxZ + 1)];
+
         int height = 0;
         if (maxX == 0 && maxZ == 0)
         {
@@ -120,7 +126,7 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
             mesh2 = GenerateTerrainMesh(BoardWidth, BoardWidth, 0, 0, height);
 
             mesh = Instantiate(mesh2);
-            firstMesh = mesh;
+            allMeshes[0] = mesh;
             meshFilter.sharedMesh = mesh;
 
             var segmentEntity = conversionSystem.CreateAdditionalEntity(gameObject);
@@ -150,9 +156,9 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
         }
         else
         {
-            for (int x = 0; x < maxX; x++)
+            for (int x = 0; x < maxX+1; x++)
             {
-                for (int z = 0; z < maxZ; z++)
+                for (int z = 0; z < maxZ+1; z++)
                 {
                     int cornerX = x * MAX_MESH_WIDTH;
                     int cornerZ = z * MAX_MESH_WIDTH;
@@ -160,7 +166,7 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
                     AABB aabb;
                     var pos = new float3(cornerX, 0, cornerZ);
 
-                    if (x < maxX - 1 && z < maxZ - 1)
+                    if (x < maxX && z < maxZ)
                     {
                         mesh2 = GenerateTerrainMesh(MAX_MESH_WIDTH, MAX_MESH_WIDTH, cornerX, cornerZ, height);
                         aabb = new AABB
@@ -170,7 +176,7 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
                         };
 
                     }
-                    else if (x < maxX - 1)
+                    else if (x < maxX)
                     {
                         mesh2 = GenerateTerrainMesh(MAX_MESH_WIDTH, BoardWidth - cornerZ, cornerX, cornerZ, height);
                         aabb = new AABB
@@ -180,7 +186,7 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
                         };
 
                     }
-                    else if (z < maxZ - 1)
+                    else if (z < maxZ)
                     {
                         mesh2 = GenerateTerrainMesh(BoardWidth - cornerX, MAX_MESH_WIDTH, cornerX, cornerZ, height);
                         aabb = new AABB
@@ -203,6 +209,9 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
 
                     mesh = Instantiate(mesh2);
                     meshFilter.sharedMesh = mesh;
+                    Debug.Log("creating mesh for : " + x + " " + z + "  " + (z + (maxX + 1) * x));
+                    allMeshes[z + (maxX+1) * x] = mesh;
+
 
                     var segmentEntity = conversionSystem.CreateAdditionalEntity(gameObject);
 
@@ -551,5 +560,57 @@ public void Convert(Entity entity, EntityManager dstManager, GameObjectConversio
             }
         }
     }
+
+    public static Mesh getMesh(int x, int z, int width)
+    {
+        int maxX = width / MAX_MESH_WIDTH;
+        int xIndex = x / MAX_MESH_WIDTH;
+        int zIndex = z / MAX_MESH_WIDTH;
+        //Debug.Log("mesh element at: " + (zIndex + (maxX + 1) * xIndex));
+        // only one mesh
+        return allMeshes[zIndex + (maxX+1) * xIndex];
+
+    }
+
+    public static int getPosForMesh(int pos)
+    {
+        if (pos < MAX_MESH_WIDTH)
+        {
+            return pos;
+        } else
+        {
+            //Debug.Log("pos for mesh is: " + (pos - (pos / MAX_MESH_WIDTH) * MAX_MESH_WIDTH));
+            return pos - (pos / MAX_MESH_WIDTH) * MAX_MESH_WIDTH;
+        }
+    }
+
+    public static int getMeshWidth(Mesh mesh, int x, int z, int width)
+    {
+        int meshCount = mesh.vertexCount / 4;
+        //Debug.Log("mesh count is : " + meshCount);
+        if (meshCount == MAX_MESH_WIDTH*MAX_MESH_WIDTH)
+        {
+            return MAX_MESH_WIDTH;
+        } else if (width < MAX_MESH_WIDTH)
+        {
+            return width;
+        } else
+        {
+            // this is on an edge: x, y, or both
+            if (z  > (MAX_MESH_WIDTH * (width / MAX_MESH_WIDTH)))
+            {
+               // Debug.Log("mesh width 2 : " + (width - MAX_MESH_WIDTH * (width / MAX_MESH_WIDTH)));
+                return width - MAX_MESH_WIDTH*(width/MAX_MESH_WIDTH);
+
+            } 
+            else
+            {
+                //Debug.Log("mesh width 3 is : " + (MAX_MESH_WIDTH));
+                return MAX_MESH_WIDTH;
+            }
+
+        }
+    }
+
 }
 
