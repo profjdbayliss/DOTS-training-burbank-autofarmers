@@ -77,7 +77,8 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         // set up max farmers for everything else
         MaxFarmers = maxFarmers;
         BoardWidth = boardWidth;
-        TillSystem.InitializeTillSystem(maxFarmers);
+        PerformTaskSystem.InitializeTillSystem(maxFarmers);
+        SearchSystem.InitializeSearchSystem(maxFarmers);
 
         // set up mesh rendering from prefab
         MeshRenderer meshRenderer = TilePrefab.GetComponent<MeshRenderer>();
@@ -273,9 +274,12 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
             var position = new float3(startX, 2, startZ);
             entityManager.SetComponentData(instance, new Translation() { Value = position });
             var data = new MovementComponent { startPos = new float2(startX, startZ), speed = 2, targetPos = new float2(startX, startZ) };
-            var intention = new IntentionComponent { intent = -1 };
+            //var intention = new IntentionComponent { intent = -1 };
+            var entityData = new EntityInfo { type = -1 };
             entityManager.SetComponentData(instance, data);
-            entityManager.SetComponentData(instance, intention);
+            //entityManager.SetComponentData(instance, intention);
+            entityManager.AddComponentData(instance, entityData);
+
             // give his first command based on the 1's in the hash
             entityManager.AddComponent<NeedsTaskTag>(instance);
         }

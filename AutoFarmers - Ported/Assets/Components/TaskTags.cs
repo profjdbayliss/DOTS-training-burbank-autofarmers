@@ -16,6 +16,12 @@ public struct MovingTag : IComponentData
 
 }
 
+[Serializable]
+public struct PerformTaskTag : IComponentData
+{
+
+}
+
 // would like to use this for catching general errors that shouldn't happen
 [Serializable]
 public struct ErrorTag : IComponentData
@@ -23,11 +29,11 @@ public struct ErrorTag : IComponentData
 
 }
 
-[Serializable]
-public struct PerformRockTaskTag : IComponentData
-{
+//[Serializable]
+//public struct PerformRockTaskTag : IComponentData
+//{
 
-}
+//}
 [Serializable]
 public struct RockTag : IComponentData
 {
@@ -40,17 +46,17 @@ public struct TilledSoilTag : IComponentData
 
 }
 
-[Serializable]
-public struct PerformTillTaskTag : IComponentData
-{
+//[Serializable]
+//public struct PerformTillTaskTag : IComponentData
+//{
 
-}
+//}
 
-[Serializable]
-public struct PerformPlantingTaskTag : IComponentData
-{
+//[Serializable]
+//public struct PerformPlantingTaskTag : IComponentData
+//{
 
-}
+//}
 
 [Serializable]
 public struct PlantTag : IComponentData

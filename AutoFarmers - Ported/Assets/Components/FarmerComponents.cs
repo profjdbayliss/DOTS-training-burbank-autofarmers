@@ -19,7 +19,7 @@ public struct IntentionComponent : IComponentData
     public int intent;
 }
 
-[Serializable]
-public enum Intentions : int { None = 0, Rock = 1, Till = 2, Plant = 3, Store = 4, PerformRock = 5, PerformTill = 6, PerformPlanting = 7, MovingToHarvest=8, PerformHarvest=9, MovingToStore = 11 };
+//[Serializable]
+//public enum Intentions : int { None = 0, Rock = 1, Till = 2, Plant = 3, Store = 4, PerformRock = 5, PerformTill = 6, PerformPlanting = 7, MovingToHarvest=8, PerformHarvest=9, MovingToStore = 11 };
 
 
