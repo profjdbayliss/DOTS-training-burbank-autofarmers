@@ -5,7 +5,9 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
+using System;
 using static Unity.Mathematics.math;
+using System.Threading;
 
 public class TillSystem : JobComponentSystem
 {
@@ -54,8 +56,9 @@ public class TillSystem : JobComponentSystem
     {
         public EntityCommandBuffer.Concurrent ecb;
         public NativeHashMap<int, EntityInfo>.ParallelWriter grid;
-        public NativeArray<float2> changes;
-        public NativeArray<int> hasChanged;
+        public NativeArray<float2> changes; // has all changes that max farmers could have made to their tiles
+                                            // during a job
+        public NativeArray<int> hasChanged; // only size one, but we pass by ref easily this way
         [ReadOnly] public Entity tilledSoil;
 
         public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref MovementComponent movementComponent)
@@ -69,18 +72,11 @@ public class TillSystem : JobComponentSystem
                 float3 pos = new float3((int)translation.Value.x, tillBlockHeight, (int)translation.Value.z);
 
                 changes[index] = new float2((int)pos.x, (int)pos.z);
-                hasChanged[0] = 1;
-
-                //var instance = ecb.Instantiate(index, tilledSoil);
-                //ecb.SetComponent(index, instance, new Translation { Value = pos });
-                //Debug.Log("added grid tilling");
+                // 1 is true : set so that we only do the expensive uv changes across all entities if we need to
+                // FIX: SHOULD BE AN INTERLOCKED ADD HERE FOR SAFETY
+                hasChanged[0]++;                
             }
-            //else
-            //{
-            //    //Debug.Log("did not add to grid");
-            //    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-            //    ecb.RemoveComponent(index, entity, typeof(PerformTillTaskTag));
-            //}
+            
             ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
             ecb.RemoveComponent(index, entity, typeof(PerformTillTaskTag));
         }
@@ -97,9 +93,10 @@ public class TillSystem : JobComponentSystem
             hasChanged = this.hasChanged,
             grid = data.gridStatus.AsParallelWriter()
         }.Schedule(this, inputDependencies);
-        job.Complete();
-
-        if (hasChanged[0] == 1)
+        job.Complete(); 
+        // we have to have a sync point here since we're about to change all uv's for the frame
+        // This happens on main thread since uv's are Vector2 types and can't be changed inside of the job
+        if (hasChanged[0] != 0)
         {
             for (int i = 0; i < GridDataInitialization.MaxFarmers; i++)
             {
@@ -107,7 +104,7 @@ public class TillSystem : JobComponentSystem
                 if ((int)pos.x != -1 && (int)pos.y != -1)
                 {
                     // set the uv's on the mesh
-                    // NOTE: setting pos to be a specific number is helpful for testing
+                    // NOTE: set pos to be a specific number for testing
                     Mesh tmp = GridDataInitialization.getMesh((int)pos.x, (int)pos.y,
                         GridDataInitialization.BoardWidth);
                     int width = GridDataInitialization.getMeshWidth(tmp, (int)pos.x,
@@ -132,12 +129,12 @@ public class TillSystem : JobComponentSystem
                     tmp.SetUVs(0, uv);
                     tmp.MarkModified();
                 }
-                hasChanged[0] = 0;
+                hasChanged[0] = 0; // nothing has been changed if it's a zero
             }
 
 
         }
 
-        return job; // job.Schedule(this, inputDependencies);
+        return job; 
     }
 }

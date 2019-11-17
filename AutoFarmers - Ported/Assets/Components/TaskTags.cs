@@ -16,6 +16,7 @@ public struct MovingTag : IComponentData
 
 }
 
+// would like to use this for catching general errors that shouldn't happen
 [Serializable]
 public struct ErrorTag : IComponentData
 {

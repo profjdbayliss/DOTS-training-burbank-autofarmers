@@ -28,7 +28,7 @@ public class PlantingSystem : JobComponentSystem
         public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref Rotation rotation)
         {
             float plantingHeight = 1.0f;
-            EntityInfo plantInfo = new EntityInfo { type = 3 };
+            EntityInfo plantInfo = new EntityInfo { type = (int)Tiles.Plant };
             if (
             grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
             plantInfo))
@@ -38,7 +38,7 @@ public class PlantingSystem : JobComponentSystem
                 var instance = ecb.Instantiate(index, plantEntity);
                 ecb.SetComponent(index, instance, new Translation { Value = pos });
                 ecb.SetComponent(index, instance, new NonUniformScale { Value = new float3(1.0f, 1.0f, 1.0f) });
-                // for some reason the plant mesh creation happens on the wrong axis, 
+                // for some reason the original plant mesh creation happens on the wrong axis, 
                 // so we have to rotate it 90 degrees
                 var newRot = rotation.Value * Quaternion.Euler(0, 0, 90);
                 ecb.SetComponent(index, instance, new Rotation { Value = newRot });

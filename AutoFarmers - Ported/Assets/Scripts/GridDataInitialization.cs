@@ -55,7 +55,6 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public static Mesh plantMesh;
 
     //  renderer info
-    //public static RenderMesh[] renderers;
     public static int MATERIAL_NUMBER = 1;
     public static Mesh[] allMeshes;
 
@@ -78,7 +77,6 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         // set up max farmers for everything else
         MaxFarmers = maxFarmers;
         BoardWidth = boardWidth;
-        Debug.Log("board width is : " + BoardWidth);
         TillSystem.InitializeTillSystem(maxFarmers);
 
         // set up mesh rendering from prefab
@@ -96,12 +94,9 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         boardArchetype = entityManager.CreateArchetype(
             typeof(Translation), typeof(GridBoard));
 
-
         // Generate tile Entities
         rockEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(RockPrefab, World.Active);
         entityManager.AddComponentData(rockEntity, new RockTag { });
-
-        //tilledTileEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(TilledGroundPrefab, World.Active);
 
 
         // generate the first plant to use for everything
@@ -234,7 +229,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
 
                     mesh = Instantiate(mesh2);
                     meshFilter.sharedMesh = mesh;
-                    Debug.Log("creating mesh for : " + x + " " + z + "  " + (z + (maxX + 1) * x));
+                    //Debug.Log("creating mesh for : " + x + " " + z + "  " + (z + (maxX + 1) * x));
                     allMeshes[z + (maxX+1) * x] = mesh;
 
 
@@ -263,8 +258,6 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         GenerateGrid();
 
         // generate the farmers
-
-
         // Create farmer entity prefab from the game object hierarchy once
         farmerEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(FarmerPrefab, World.Active);
 
@@ -278,7 +271,6 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
 
             // Place the instantiated entity in a grid with some noise
             var position = new float3(startX, 2, startZ);
-            //var position = transform.TransformPoint(new float3(0,0,0));
             entityManager.SetComponentData(instance, new Translation() { Value = position });
             var data = new MovementComponent { startPos = new float2(startX, startZ), speed = 2, targetPos = new float2(startX, startZ) };
             var intention = new IntentionComponent { intent = -1 };
@@ -376,13 +368,6 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         }
         return new TextureUV();
     }
-    //public void OnDestroy()
-    //{
-    //    if (rockEntities.IsCreated)
-    //    {
-    //        rockEntities.Dispose();
-    //    }    
-    //}
 
     // create the atlas texture image from lots of little images
     public static void CreateAtlasData()
@@ -561,9 +546,9 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
 
             EntityInfo cellValue;
             data.gridStatus.TryGetValue(GridData.ConvertToHash(x, y), out cellValue);
-            if (cellValue.type != 4)
+            if (cellValue.type != (int)Tiles.Store)
             {
-                cellValue = new EntityInfo { type = 4 };
+                cellValue = new EntityInfo { type = (int)Tiles.Store };
                 data.gridStatus.TryAdd(GridData.ConvertToHash(x, y), cellValue);
                 Instantiate(StorePrefab, new Vector3(x, 0, y), Quaternion.identity);
                 spawnedStores++;
@@ -614,7 +599,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
                     // get some new rock entities and add them to an array
                     // so we can find them later
                     Entity tmp = entityManager.Instantiate(rockEntity);
-                    EntityInfo info = new EntityInfo { type = 1, specificEntity = tmp };
+                    EntityInfo info = new EntityInfo { type = (int)Tiles.Rock, specificEntity = tmp };
                     data.gridStatus.TryAdd(GridData.ConvertToHash(x, y), info);
                     //Debug.Log("entity info is: " + x + " " + y + " index: " + entityIndex + " " + tmp.Index);
                     entityManager.SetComponentData(tmp, new Translation() { Value = new Unity.Mathematics.float3(x, 0, y) });

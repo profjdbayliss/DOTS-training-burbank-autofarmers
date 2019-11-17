@@ -11,8 +11,6 @@ public class Movement : JobComponentSystem
 {
     public float deltaTime;
     public EntityCommandBufferSystem ecbs;
-    private static PerformRockTaskTag data = new PerformRockTaskTag();
-
 
     protected override void OnCreate()
     {
@@ -27,9 +25,6 @@ public class Movement : JobComponentSystem
         public EntityCommandBuffer.Concurrent ecb;
         public float deltaTime;
         public float2 rockPos;
-        public enum Intentions : int { None = 0, Rock = 1, Till = 2, Plant = 3, Store = 4, PerformRock = 5, PerformTill = 6, PerformPlanting = 7, MovingToStore = 11, MovingToHarvest = 12, PerformHarvest = 13 };
-
-
 
         public void Execute(Entity entity, int index, ref Translation translation, [ReadOnly] ref Rotation rotation, ref MovementComponent actor, ref IntentionComponent intent)
         {

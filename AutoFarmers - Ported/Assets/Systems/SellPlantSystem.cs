@@ -25,6 +25,8 @@ public class SellPlantSystem : JobComponentSystem
         
 		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref MovementComponent actor)
 		{
+            // another magic number - tolerance just needs to be smaller than 0.5 so that the char has to be on the right
+            // tile in order to perform its task
             float tolerance = 0.25f;
 			if (Mathf.Abs(translation.Value.x - actor.targetPos.x) < tolerance &&
 			    Mathf.Abs(translation.Value.y - actor.targetPos.y) < tolerance

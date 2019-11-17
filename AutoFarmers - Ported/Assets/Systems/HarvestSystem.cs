@@ -9,20 +9,18 @@ using static Unity.Mathematics.math;
 
 public class HarvestSystem : JobComponentSystem
 {
-    //static Unity.Mathematics.Random rand;
-
     private EntityCommandBufferSystem ecbs;
 	private EntityQuery plantQuery;
 
 	protected override void OnCreate()
 	{
-        //rand = new Unity.Mathematics.Random(42);
         ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
 		plantQuery = GetEntityQuery(new EntityQueryDesc
 		{
 			All = new[] { ComponentType.ReadOnly<PlantTag>(), typeof(Translation) },
 
 		});
+
 	}
 
 	[BurstCompile]
@@ -42,7 +40,7 @@ public class HarvestSystem : JobComponentSystem
 		{
             // Debug.Log("trying to harvest");
             //float plantingHeight = 0.25f;
-            EntityInfo harvestInfo = new EntityInfo { type = 2 };
+            EntityInfo harvestInfo = new EntityInfo { type = (int)Tiles.Till };
             if (
 			grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
 			harvestInfo))
@@ -111,8 +109,8 @@ public class HarvestSystem : JobComponentSystem
             plantLocations = plantQuery.ToComponentDataArray<Translation>(Allocator.TempJob),
             plantEntities = plantQuery.ToEntityArray(Allocator.TempJob),
             plantCount = plantQuery.CalculateEntityCount(),
-            targetStore = GridData.Search(data.gridStatus, new float2(nextX, nextZ), 50, 4, data.width, data.width),
-
+            targetStore = GridData.Search(data.gridStatus, new float2(nextX, nextZ), 50,
+            (int)Tiles.Store, data.width, data.width),
             // plantEntity = GridDataInitialization.plantEntity,
             grid = data.gridStatus.AsParallelWriter()
         };

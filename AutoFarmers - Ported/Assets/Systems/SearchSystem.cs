@@ -24,6 +24,7 @@ public class SearchSystem : JobComponentSystem
         {
             randomValues[i] = System.Math.Abs(rand.NextInt());
         }
+
     }
 
     [BurstCompile]
@@ -37,13 +38,13 @@ public class SearchSystem : JobComponentSystem
         [ReadOnly] public int gridSize;
         [ReadOnly] public int radiusForSearch;
 
-        public enum Intentions : int { None = 0, Rock = 1, Till = 2, Plant = 3, Store = 4, PerformRock = 5, PerformTill = 6, PerformPlanting = 7, MovingToStore = 11 };
-        public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref MovementComponent movementComponent, ref IntentionComponent intent)
+        //public enum Intentions : int { None = 0, Rock = 1, Till = 2, Plant = 3, Store = 4, PerformRock = 5, PerformTill = 6, PerformPlanting = 7, MovingToStore = 11 };
+        public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref MovementComponent movementComponent, ref IntentionComponent entityIntent)
         {
+            // magic numbers remaining - till radius and the 3 in task value
             int TILL_RADIUS = 5;
-            // set new task: should be more complicated
             int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 3) + 1;
-            Debug.Log("finding new task : " + taskValue);
+            //Debug.Log("finding new task : " + taskValue);
             float2 pos = new float2(translation.Value.x, translation.Value.z);
             float2 foundLocation;
 
@@ -70,11 +71,7 @@ public class SearchSystem : JobComponentSystem
                 // we look for a default spot to put a tilled thing
                 float2 nextPos = new float2(Mathf.Abs(rand.NextInt()) % gridSize, Mathf.Abs(rand.NextInt()) % gridSize);
                 foundLocation = GridData.Search(gridHashMap, nextPos, TILL_RADIUS, 0, gridSize, gridSize);
-                //if (gridHashMap.TryGetValue(GridData.ConvertToHash((int)nextPos.x, (int)nextPos.y), out value))
-                //{
-                //    //Debug.Log("random location didn't work");
-                //    foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, 3, gridSize, gridSize);
-                //}    
+
             }
             if (foundLocation.x != -1 && foundLocation.y != -1)
             {
@@ -95,18 +92,15 @@ public class SearchSystem : JobComponentSystem
 
                     rockPos = new float2(rockPos.x + 0.5f, rockPos.y + 0.5f);
                     var data = new MovementComponent { startPos = pos, speed = 2, targetPos = rockPos, middlePos = findMiddle};
-                    var intention = new IntentionComponent { intent = 1 };
+                    var intention = new IntentionComponent { intent = (int)Tiles.Rock };
                     // get the index into the array of rocks so that we can find it
                     // to destroy it
                     EntityInfo fullRockData = GridData.getFullHashValue(gridHashMap, (int)rockPos.x, (int)rockPos.y);
-                    //int rockEntityIndex = GridData.getArrayLocation(fullRockData);
-                    //Entity tmp = fullRockData.specificEntity;
-                    //RockInfo rockEntityInfo = new RockInfo { specificRock = tmp };
                     ecb.AddComponent(index, entity, fullRockData);
                     //Debug.Log("rock task happening : " + rockEntityIndex + " " + tmp.Index);
 
                     movementComponent = data;
-                    intent = intention;
+                    entityIntent = intention;
                     ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
                     ecb.AddComponent(index, entity, typeof(MovingTag));
                     int key = GridData.ConvertToHash((int)rockPos.x, (int)rockPos.y);
@@ -116,7 +110,6 @@ public class SearchSystem : JobComponentSystem
                 {
 
                     foundLocation = new float2(foundLocation.x + 0.5f, foundLocation.y + 0.5f);
-                    //findMiddle = MovementJob.FindMiddlePos(pos, foundLocation);
 
                     var data = new MovementComponent { startPos = pos, speed = 2, targetPos = foundLocation, middlePos = findMiddle };
                     ecb.SetComponent(index, entity, data);

@@ -4,12 +4,15 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
+// Data structure: hash table with Entity information per tile position
+// where it exists since it's a sparse data set for the majority
+// of the sim
 public class GridData 
 {
     private static GridData data = null;
 
     const int BOARD_MULTIPLIER = 1000; // max board x and y size is 999
-    //const int ARRAY_MULTIPLIER = 100; // max number of statuses is 99
+                                        // x and y are just concatenated to make the key
 
     public int width = 10;
     public NativeHashMap<int, EntityInfo> gridStatus;
@@ -43,9 +46,7 @@ public class GridData
         //gridStatus.TryGetValue(ConvertToHash(7, 7), out temp);
         //float2 tmp = GridData.Search(new float2(7, 7), 5, 3);
         //Debug.Log("count that exists: " + tmp.x + " " + tmp.y);
-
-        //em = World.Active.EntityManager;
-        //CreateTestEntity();
+        
     }
 
 
@@ -59,7 +60,8 @@ public class GridData
     }
 
     // the board width is the capacity and needs to be multiplied by itself
-    // to get the true every space capacity
+    // to get the true every space capacity because capacity
+    // is assumed just to be the width of the board
     public void Initialize(int capacity)
     {
         if(gridStatus.IsCreated)
@@ -71,14 +73,10 @@ public class GridData
         this.width = capacity;
     }
 
+    // creates a key from the row/col of a tile location
     public static int ConvertToHash(int row, int col)
     {
         return row * BOARD_MULTIPLIER + col;
-    }
-
-    public static EntityInfo ConvertDataValue(EntityInfo e, int arrayLocation)
-    {
-        return e;
     }
 
     public static EntityInfo getFullHashValue(NativeHashMap<int, EntityInfo> hashMap, int row, int col)
@@ -88,21 +86,13 @@ public class GridData
         return returnValue;
     }
 
-    //public static int getArrayLocation(int dataValue)
-    //{
-    //   return dataValue / ARRAY_MULTIPLIER;
-    //}
-
-    //public static int getStatus(int dataValue)
-    //{
-    //    return dataValue - getArrayLocation(dataValue) * ARRAY_MULTIPLIER;
-    //}
-
+    // the row and col are concatenated to form the key
     public static int getRow(int key)
     {
         return key / BOARD_MULTIPLIER;
     }
 
+    // the row and col are concatenated to form the key
     public static int getCol(int key)
     {
         return key - getRow(key)* BOARD_MULTIPLIER;
@@ -111,7 +101,7 @@ public class GridData
     // assumes good data input for positions and is not checking for positions off the board
     public static float2 FindTheRock(NativeHashMap<int, EntityInfo> hashMap, float2 currentPos, float2 middlePos, float2 targetPos, int sizeX, int sizeZ)
     {
-        int ROCK = 1;
+        int ROCK = (int)Tiles.Rock;
         int startX = (int)currentPos.x;
         int startY = (int)currentPos.y;
         int endX = (int)middlePos.x;
@@ -283,13 +273,15 @@ public class GridData
 
         }
 
-
-
-
         // no rocks means this return
         return new float2(-1, -1);
     }
 
+    // looks for a particular status id in a surrounding square radius
+    // from a position
+    // Doesn't look for the best position, looks for the first randomly
+    // starting either at the first part of the array of locations or
+    // from the end to the first
     public static float2 Search(NativeHashMap<int, EntityInfo> hashMap, float2 currentPos, int radius, int statusToFind, int sizeX, int sizeZ)
     {
         Unity.Mathematics.Random rand;
