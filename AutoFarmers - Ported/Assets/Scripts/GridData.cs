@@ -9,10 +9,10 @@ public class GridData
     private static GridData data = null;
 
     const int BOARD_MULTIPLIER = 1000; // max board x and y size is 999
-    const int ARRAY_MULTIPLIER = 100; // max number of statuses is 99
+    //const int ARRAY_MULTIPLIER = 100; // max number of statuses is 99
 
     public int width = 10;
-    public NativeHashMap<int, int> gridStatus;
+    public NativeHashMap<int, EntityInfo> gridStatus;
 
     public static GridData GetInstance()
     {
@@ -67,7 +67,7 @@ public class GridData
             gridStatus.Dispose();
         }
 
-        gridStatus = new NativeHashMap<int, int>(capacity*capacity, Allocator.Persistent);
+        gridStatus = new NativeHashMap<int, EntityInfo>(capacity*capacity, Allocator.Persistent);
         this.width = capacity;
     }
 
@@ -76,20 +76,27 @@ public class GridData
         return row * BOARD_MULTIPLIER + col;
     }
 
-    public static int ConvertDataValue(int status, int arrayLocation)
+    public static EntityInfo ConvertDataValue(EntityInfo e, int arrayLocation)
     {
-        return arrayLocation * ARRAY_MULTIPLIER + status;
+        return e;
     }
 
-    public static int getArrayLocation(int dataValue)
+    public static EntityInfo getFullHashValue(NativeHashMap<int, EntityInfo> hashMap, int row, int col)
     {
-       return dataValue / ARRAY_MULTIPLIER;
+        EntityInfo returnValue;
+        hashMap.TryGetValue(GridData.ConvertToHash(row, col), out returnValue);       
+        return returnValue;
     }
 
-    public static int getStatus(int dataValue)
-    {
-        return dataValue - getArrayLocation(dataValue) * ARRAY_MULTIPLIER;
-    }
+    //public static int getArrayLocation(int dataValue)
+    //{
+    //   return dataValue / ARRAY_MULTIPLIER;
+    //}
+
+    //public static int getStatus(int dataValue)
+    //{
+    //    return dataValue - getArrayLocation(dataValue) * ARRAY_MULTIPLIER;
+    //}
 
     public static int getRow(int key)
     {
@@ -102,7 +109,7 @@ public class GridData
     }
 
     // assumes good data input for positions and is not checking for positions off the board
-    public static float2 FindTheRock(NativeHashMap<int, int> hashMap, float2 currentPos, float2 middlePos, float2 targetPos, int sizeX, int sizeZ)
+    public static float2 FindTheRock(NativeHashMap<int, EntityInfo> hashMap, float2 currentPos, float2 middlePos, float2 targetPos, int sizeX, int sizeZ)
     {
         int ROCK = 1;
         int startX = (int)currentPos.x;
@@ -113,7 +120,7 @@ public class GridData
         int i = startX;
         int j = startY;
         int countEnd = 0;
-        int value = 0;
+        EntityInfo value;
         if (endX-startX != 0)
         {
             countEnd = endX;
@@ -126,7 +133,7 @@ public class GridData
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
                         //Debug.Log("found something!");
-                        if (getStatus(value) == ROCK)
+                        if (value.type == ROCK)
                         {
                             return new float2(i, j);
                         }
@@ -142,7 +149,7 @@ public class GridData
                     {
                         //Debug.Log("found something!");
                         
-                        if (getStatus(value) == ROCK)
+                        if (value.type == ROCK)
                         {
                             return new float2(i, j);
                         }
@@ -165,7 +172,7 @@ public class GridData
                     {
                         //Debug.Log("found something!");
 
-                        if (getStatus(value) == ROCK)
+                        if (value.type == ROCK)
                         {
                             return new float2(i, j);
                         }
@@ -181,7 +188,7 @@ public class GridData
                     {
                         //Debug.Log("found something!");
 
-                        if (getStatus(value) == ROCK)
+                        if (value.type == ROCK)
                         {
                             return new float2(i, j);
                         }
@@ -202,7 +209,6 @@ public class GridData
         i = startX;
         j = startY;
         countEnd = 0;
-        value = 0;
         if (endX - startX != 0)
         {
             // this is the dir we're searching
@@ -215,7 +221,7 @@ public class GridData
 
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
-                        if (getStatus(value) == ROCK)
+                        if (value.type == ROCK)
                         {
                             return new float2(i, j);
                         }
@@ -231,7 +237,7 @@ public class GridData
 
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
-                        if (getStatus(value) == ROCK)
+                        if (value.type == ROCK)
                         {
                             return new float2(i, j);
                         }
@@ -252,7 +258,7 @@ public class GridData
 
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
-                        if (getStatus(value) == ROCK)
+                        if (value.type == ROCK)
                         {
                             return new float2(i, j);
                         }
@@ -267,7 +273,7 @@ public class GridData
 
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
-                        if (getStatus(value) == ROCK)
+                        if (value.type == ROCK)
                         {
                             return new float2(i, j);
                         }
@@ -284,7 +290,7 @@ public class GridData
         return new float2(-1, -1);
     }
 
-    public static float2 Search(NativeHashMap<int, int> hashMap, float2 currentPos, int radius, int statusToFind, int sizeX, int sizeZ)
+    public static float2 Search(NativeHashMap<int, EntityInfo> hashMap, float2 currentPos, int radius, int statusToFind, int sizeX, int sizeZ)
     {
         Unity.Mathematics.Random rand;
         if ((uint)currentPos.x == 0)
@@ -313,7 +319,7 @@ public class GridData
             endY = sizeZ-1;
         }
 
-        int value = 0;
+        EntityInfo value;
         if ((Mathf.Abs(rand.NextInt())%100) > 50)
         {
             //Debug.Log("positive search position");
@@ -323,7 +329,7 @@ public class GridData
                 {
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
-                        if (getStatus(value) == statusToFind)
+                        if (value.type == statusToFind)
                         {
                             return new float2(i, j);
                         }
@@ -343,7 +349,7 @@ public class GridData
                 {
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
-                        if (getStatus(value) == statusToFind)
+                        if (value.type == statusToFind)
                         {
                             return new float2(i, j);
                         }

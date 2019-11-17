@@ -27,7 +27,7 @@ public class HarvestSystem : JobComponentSystem
 
 	[BurstCompile]
 	[RequireComponentTag(typeof(PerformHarvestTaskTag))]
-	struct HarvestSystemJob : IJobForEachWithEntity<Translation, actor_RunTimeComp>
+	struct HarvestSystemJob : IJobForEachWithEntity<Translation, MovementComponent, IntentionComponent>
 	{
 		public EntityCommandBuffer.Concurrent ecb;
 		[DeallocateOnJobCompletion] [ReadOnly] public NativeArray<Translation> plantLocations;
@@ -35,16 +35,17 @@ public class HarvestSystem : JobComponentSystem
 		public int plantCount;
         public float2 targetStore;
 
-		public NativeHashMap<int, int>.ParallelWriter grid;
+		public NativeHashMap<int, EntityInfo>.ParallelWriter grid;
 		[ReadOnly] public Entity plantEntity;
 
-		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref actor_RunTimeComp movementComponent)
+		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref MovementComponent movementComponent, ref IntentionComponent intent)
 		{
-           // Debug.Log("trying to harvest");
+            // Debug.Log("trying to harvest");
             //float plantingHeight = 0.25f;
+            EntityInfo harvestInfo = new EntityInfo { type = 2 };
             if (
 			grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
-			GridData.ConvertDataValue(2, 0)))
+			harvestInfo))
 			{
 
 				ecb.RemoveComponent(index, entity, typeof(PerformHarvestTaskTag));
@@ -60,21 +61,25 @@ public class HarvestSystem : JobComponentSystem
                         // Search for a store
 
                         // Set the plants 
-                        ecb.AddComponent(i, plantEntities[i], typeof(actor_RunTimeComp));
-                        ecb.SetComponent(i, plantEntities[i], new actor_RunTimeComp {
-							intent = 11, speed = 5,
+                        ecb.AddComponent(i, plantEntities[i], typeof(MovementComponent));
+                        ecb.SetComponent(i, plantEntities[i], new MovementComponent
+                        {
+							speed = 5,
 							startPos = new Unity.Mathematics.float2(plantLocations[i].Value.x, plantLocations[i].Value.z),
 							targetPos = targetStore
 						});
+                        ecb.SetComponent(i, plantEntities[i], new IntentionComponent { intent = 11 });
 						ecb.AddComponent(i, plantEntities[i], typeof(MovingTag));
 
                         //farmer
-						ecb.SetComponent(index, entity, new actor_RunTimeComp{
-							intent = 11, speed = 5,
+						ecb.SetComponent(index, entity, new MovementComponent
+                        {
+							speed = 5,
 							startPos = new Unity.Mathematics.float2(plantLocations[i].Value.x, plantLocations[i].Value.z),
 							targetPos = targetStore
 						});
-						ecb.AddComponent(index, entity, typeof(MovingTag));
+                        ecb.SetComponent(i, plantEntities[i], new IntentionComponent { intent = 11 });
+                        ecb.AddComponent(index, entity, typeof(MovingTag));
 
 					}
 				}

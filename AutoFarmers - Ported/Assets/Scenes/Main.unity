@@ -243,11 +243,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 776a6caafaf5da94e9fe1d7a365e0b0d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boardWidth: 100
-  rockSpawnAttempts: 500
+  boardWidth: 20
+  rockSpawnAttempts: 30
   storeCount: 5
   maxFarmers: 1000
-  farmerNumber: 10
+  farmerNumber: 1
   RockPrefab: {fileID: 8408007631743160701, guid: 3eed0651058123240bd33f559d605398,
     type: 3}
   StorePrefab: {fileID: 1660769586978544541, guid: fb61399e21e6d694a94f8759b74fef5c,
@@ -362,7 +362,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 52, y: 91, z: 49}
+  m_LocalPosition: {x: 0, y: 50, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 705507995}

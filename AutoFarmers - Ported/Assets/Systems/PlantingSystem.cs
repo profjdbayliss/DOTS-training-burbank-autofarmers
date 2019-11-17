@@ -9,56 +9,57 @@ using static Unity.Mathematics.math;
 
 public class PlantingSystem : JobComponentSystem
 {
-	private EntityCommandBufferSystem ecbs;
+    private EntityCommandBufferSystem ecbs;
 
-	protected override void OnCreate()
-	{
-		ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
-	}
+    protected override void OnCreate()
+    {
+        ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
+    }
 
-	[BurstCompile]
-	[RequireComponentTag(typeof(PerformPlantingTaskTag))]
-	struct PlantingSystemJob : IJobForEachWithEntity<Translation, Rotation, actor_RunTimeComp>
-	{
-		public EntityCommandBuffer.Concurrent ecb;
-		public NativeHashMap<int, int>.ParallelWriter grid;
-		[ReadOnly] public Entity plantEntity;
+    [BurstCompile]
+    [RequireComponentTag(typeof(PerformPlantingTaskTag))]
+    public struct PlantingSystemJob : IJobForEachWithEntity<Translation, Rotation>
+    {
+        public EntityCommandBuffer.Concurrent ecb;
+        [NativeDisableParallelForRestriction]
+        [Unity.Collections.LowLevel.Unsafe.NativeDisableContainerSafetyRestriction] public NativeHashMap<int, EntityInfo>.ParallelWriter grid;
+        [ReadOnly] public Entity plantEntity;
 
-		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref Rotation rotation, ref actor_RunTimeComp movementComponent)
-		{
-			float plantingHeight = 1.0f;
-
+        public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref Rotation rotation)
+        {
+            float plantingHeight = 1.0f;
+            EntityInfo plantInfo = new EntityInfo { type = 3 };
             if (
-			grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
-			GridData.ConvertDataValue(3, 0)))
-			{
-				float3 pos = new float3((int)translation.Value.x, plantingHeight, (int)translation.Value.z);
+            grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
+            plantInfo))
+            {
+                float3 pos = new float3((int)translation.Value.x, plantingHeight, (int)translation.Value.z);
 
-				var instance = ecb.Instantiate(index, plantEntity);
-				ecb.SetComponent(index, instance, new Translation { Value = pos });
+                var instance = ecb.Instantiate(index, plantEntity);
+                ecb.SetComponent(index, instance, new Translation { Value = pos });
                 ecb.SetComponent(index, instance, new NonUniformScale { Value = new float3(1.0f, 1.0f, 1.0f) });
                 // for some reason the plant mesh creation happens on the wrong axis, 
                 // so we have to rotate it 90 degrees
-                var newRot = rotation.Value * Quaternion.Euler(0, 0, 90); 
+                var newRot = rotation.Value * Quaternion.Euler(0, 0, 90);
                 ecb.SetComponent(index, instance, new Rotation { Value = newRot });
                 ecb.SetComponent(index, instance, new PlantComponent { timeGrown = 0 });
                 ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-				ecb.RemoveComponent(index, entity, typeof(PerformPlantingTaskTag));
-				//Debug.Log("added grid plant");
-			}
-			else
-			{
-				//Debug.Log("did not add to plant");
-				ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-				ecb.RemoveComponent(index, entity, typeof(PerformPlantingTaskTag));
-			}
+                ecb.RemoveComponent(index, entity, typeof(PerformPlantingTaskTag));
+                //Debug.Log("added grid plant");
+            }
+            else
+            {
+                //Debug.Log("did not add to plant");
+                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                ecb.RemoveComponent(index, entity, typeof(PerformPlantingTaskTag));
+            }
 
 
-		}
-	}
+        }
+    }
 
-	protected override JobHandle OnUpdate(JobHandle inputDependencies)
-	{
+    protected override JobHandle OnUpdate(JobHandle inputDependencies)
+    {
         GridData data = GridData.GetInstance();
         var job = new PlantingSystemJob
         {
@@ -69,6 +70,6 @@ public class PlantingSystem : JobComponentSystem
         var jobHandle = job.ScheduleSingle(this, inputDependencies);
         ecbs.AddJobHandleForProducer(jobHandle);
 
-		return jobHandle; 
-	}
+        return jobHandle;
+    }
 }

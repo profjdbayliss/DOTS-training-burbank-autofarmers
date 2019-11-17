@@ -18,12 +18,12 @@ public class SellPlantSystem : JobComponentSystem
 
 	[BurstCompile]
 	[RequireComponentTag(typeof(PlantTag))]
-	struct SellPlantSystemJob : IJobForEachWithEntity<Translation, actor_RunTimeComp>
+	struct SellPlantSystemJob : IJobForEachWithEntity<Translation, MovementComponent>
 	{
 		public EntityCommandBuffer.Concurrent ecb;
 		[ReadOnly] public Entity farmer;
         
-		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref actor_RunTimeComp actor)
+		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref MovementComponent actor)
 		{
             float tolerance = 0.25f;
 			if (Mathf.Abs(translation.Value.x - actor.targetPos.x) < tolerance &&
@@ -36,10 +36,10 @@ public class SellPlantSystem : JobComponentSystem
 				var instance = ecb.Instantiate(index, farmer);
 				ecb.SetComponent(index, instance, new Translation { Value = pos });
 				ecb.AddComponent(index, instance, typeof(NeedsTaskTag));
-				ecb.AddComponent(index, instance, new actor_RunTimeComp
+				ecb.AddComponent(index, instance, new MovementComponent
 				{
 					speed = 5,
-					intent = 0,
+					
 				});
 
 				// kill this plant

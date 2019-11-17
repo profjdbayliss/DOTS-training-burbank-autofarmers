@@ -50,20 +50,21 @@ public class TillSystem : JobComponentSystem
 
     [BurstCompile]
     [RequireComponentTag(typeof(PerformTillTaskTag))]
-    struct TillSystemJob : IJobForEachWithEntity<Translation, actor_RunTimeComp>
+    struct TillSystemJob : IJobForEachWithEntity<Translation, MovementComponent>
     {
         public EntityCommandBuffer.Concurrent ecb;
-        public NativeHashMap<int, int>.ParallelWriter grid;
+        public NativeHashMap<int, EntityInfo>.ParallelWriter grid;
         public NativeArray<float2> changes;
         public NativeArray<int> hasChanged;
         [ReadOnly] public Entity tilledSoil;
 
-        public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref actor_RunTimeComp movementComponent)
+        public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref MovementComponent movementComponent)
         {
             float tillBlockHeight = 0.25f;
+            EntityInfo harvestInfo = new EntityInfo { type = 2 };
             if (
             grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
-            GridData.ConvertDataValue(2, 0)))
+            harvestInfo))
             {
                 float3 pos = new float3((int)translation.Value.x, tillBlockHeight, (int)translation.Value.z);
 

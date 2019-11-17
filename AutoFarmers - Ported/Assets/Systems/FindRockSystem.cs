@@ -24,30 +24,32 @@ public class FindRockSystem : JobComponentSystem
 
 	[RequireComponentTag(typeof(PerformRockTaskTag))]
 	[BurstCompile]
-	struct FindRockSystemJob : IJobForEachWithEntity<Translation>
+	struct FindRockSystemJob : IJobForEachWithEntity<Translation, EntityInfo>
 	{
 		public EntityCommandBuffer.Concurrent ecb;
-		[DeallocateOnJobCompletion][ReadOnly] public NativeArray<Translation> rockLocations;
-		[DeallocateOnJobCompletion][ReadOnly]public NativeArray<Entity> rockEntities;
-		public int rockCount;
+        //[ReadOnly] public ComponentDataFromEntity<Translation> TranslationType;
+        [ReadOnly] public ComponentDataFromEntity<RockTag> IsRockType;
 
-		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation)
+        public int rockCount;
+
+		public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref EntityInfo rockInfo)
 		{
-            //Debug.Log("inside of perform rock");
-			for (int i = 0; i < rockCount; i++)
-			{
-                //Debug.Log("rock locations: " + translation.Value.x + " " + translation.Value.z + 
-                //    " " +rockLocations[i].Value.x + " " + rockLocations[i].Value.z );
-                if ((int)rockLocations[i].Value.x == (int)translation.Value.x &&
-				(int)rockLocations[i].Value.z == (int)translation.Value.z)
-				{
-                    //Debug.Log("destroying a rock with location: " + translation.Value.x + " " + translation.Value.z);
-					//ecb.AddComponent(i, rockEntities[i], typeof(DestroyRockTag));
-                    ecb.DestroyEntity(i, rockEntities[i]);
+            int ROCK = 1;
+            //float3 pos = TranslationType[rockInfo.specificRock].Value;
+            //Debug.Log("rock index is: " + rockInfo.specificRock.Index);
+            //Debug.Log("rock version is: " + rockInfo.specificRock.Version);
+            //Debug.Log("rock position is: " + pos.x + " " + pos.z);
+            //Debug.Log("destroying a rock with location: " + translation.Value.x + " " + translation.Value.z);
+            //if ((int)pos.x == (int)translation.Value.x &&
+			//	(int)pos.z == (int)translation.Value.z)
+			//	{
+            if (rockInfo.type == ROCK) {
+                //Debug.Log("destroying rock");
+                    ecb.DestroyEntity(rockInfo.specificEntity.Index, rockInfo.specificEntity);
                     ecb.RemoveComponent(index, entity, typeof(PerformRockTaskTag));
+                    ecb.RemoveComponent(index, entity, typeof(EntityInfo));
                     ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                }
-			}
+             }
 		}
 	}
 
@@ -55,8 +57,8 @@ public class FindRockSystem : JobComponentSystem
 	{
 		var job = new FindRockSystemJob();
 		job.rockCount = m_RockQuery.CalculateEntityCount();
-		job.rockLocations = m_RockQuery.ToComponentDataArray<Translation>(Allocator.TempJob);
-		job.rockEntities = m_RockQuery.ToEntityArray(Allocator.TempJob);
+        //job.TranslationType = GetComponentDataFromEntity<Translation>(true);
+        job.IsRockType = GetComponentDataFromEntity<RockTag>(true);
 		job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
 
 

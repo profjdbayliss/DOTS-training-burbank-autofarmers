@@ -28,27 +28,29 @@ public class SearchSystem : JobComponentSystem
 
     [BurstCompile]
     [RequireComponentTag(typeof(NeedsTaskTag))]
-    struct SearchSystemJob : IJobForEachWithEntity<Translation, actor_RunTimeComp>
+    struct SearchSystemJob : IJobForEachWithEntity<Translation, MovementComponent, IntentionComponent>
     {
         public EntityCommandBuffer.Concurrent ecb;
-        public NativeHashMap<int, int> gridHashMap;
+        [Unity.Collections.LowLevel.Unsafe.NativeDisableContainerSafetyRestriction] public NativeHashMap<int, EntityInfo> gridHashMap;
         [ReadOnly] public NativeArray<int> randArray;
         [ReadOnly] public int nextIndex;
         [ReadOnly] public int gridSize;
         [ReadOnly] public int radiusForSearch;
+
         public enum Intentions : int { None = 0, Rock = 1, Till = 2, Plant = 3, Store = 4, PerformRock = 5, PerformTill = 6, PerformPlanting = 7, MovingToStore = 11 };
-        public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref actor_RunTimeComp movementComponent)
+        public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref MovementComponent movementComponent, ref IntentionComponent intent)
         {
             int TILL_RADIUS = 5;
             // set new task: should be more complicated
             int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 3) + 1;
-            //Debug.Log("finding new task : " + taskValue);
+            Debug.Log("finding new task : " + taskValue);
             float2 pos = new float2(translation.Value.x, translation.Value.z);
             float2 foundLocation;
 
             if (taskValue == (int)Intentions.Rock)
             {
                 foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, taskValue, gridSize, gridSize);
+                
             }
             else if (taskValue == (int)Intentions.Plant)
             {
@@ -92,8 +94,19 @@ public class SearchSystem : JobComponentSystem
                     //Debug.Log("Updated rock position to: " + rockPos + "Actor is now chasing a rock");
 
                     rockPos = new float2(rockPos.x + 0.5f, rockPos.y + 0.5f);
-                    var data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = rockPos, middlePos = findMiddle, intent = 1 };
+                    var data = new MovementComponent { startPos = pos, speed = 2, targetPos = rockPos, middlePos = findMiddle};
+                    var intention = new IntentionComponent { intent = 1 };
+                    // get the index into the array of rocks so that we can find it
+                    // to destroy it
+                    EntityInfo fullRockData = GridData.getFullHashValue(gridHashMap, (int)rockPos.x, (int)rockPos.y);
+                    //int rockEntityIndex = GridData.getArrayLocation(fullRockData);
+                    //Entity tmp = fullRockData.specificEntity;
+                    //RockInfo rockEntityInfo = new RockInfo { specificRock = tmp };
+                    ecb.AddComponent(index, entity, fullRockData);
+                    //Debug.Log("rock task happening : " + rockEntityIndex + " " + tmp.Index);
+
                     movementComponent = data;
+                    intent = intention;
                     ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
                     ecb.AddComponent(index, entity, typeof(MovingTag));
                     int key = GridData.ConvertToHash((int)rockPos.x, (int)rockPos.y);
@@ -105,8 +118,11 @@ public class SearchSystem : JobComponentSystem
                     foundLocation = new float2(foundLocation.x + 0.5f, foundLocation.y + 0.5f);
                     //findMiddle = MovementJob.FindMiddlePos(pos, foundLocation);
 
-                    actor_RunTimeComp data = new actor_RunTimeComp { startPos = pos, speed = 2, targetPos = foundLocation, middlePos = findMiddle, intent = taskValue };
+                    var data = new MovementComponent { startPos = pos, speed = 2, targetPos = foundLocation, middlePos = findMiddle };
                     ecb.SetComponent(index, entity, data);
+                    var intention = new IntentionComponent { intent = taskValue };
+                    ecb.SetComponent(index, entity, intention);
+
                     //Debug.Log("doing a task and about to move: " + pos.x + " " + pos.y +
                     //    " target is : " + data.targetPos.x + " " + data.targetPos.y);
                     //Debug.Log("rock value: " + rockPos);
@@ -116,6 +132,15 @@ public class SearchSystem : JobComponentSystem
                     if (taskValue == (int)Intentions.Rock)
                     {
                         int key = GridData.ConvertToHash((int)foundLocation.x, (int)foundLocation.y);
+                        // get the index into the array of rocks so that we can find it
+                        // to destroy it
+                        EntityInfo fullRockData = GridData.getFullHashValue(gridHashMap, (int)rockPos.x, (int)rockPos.y);
+                        //int rockEntityIndex = GridData.getArrayLocation(fullRockData);
+                        //Entity tmp = rocks[rockEntityIndex];
+                        //RockInfo rockEntityInfo = new RockInfo { specificRock = tmp };
+                        //Debug.Log("rock task happening : " + rockEntityIndex + " " + tmp.Index);
+                        ecb.AddComponent(index, entity, fullRockData);
+                        // remove the rock from the hash so that nobody else tries to get it
                         gridHashMap.Remove(key);
                     }
                     if (taskValue == (int)Intentions.Plant)
@@ -154,8 +179,10 @@ public class SearchSystem : JobComponentSystem
         job.radiusForSearch = 15;
 
         //Debug.Log("nextInt: " + (randomValues[(index) % randomValues.Length]%4 + 1));
-        var jobHandle = job.ScheduleSingle(this, inputDependencies);
+        var jobHandle = job.Schedule(this, inputDependencies);
         ecbs.AddJobHandleForProducer(jobHandle);
+
+     
         return jobHandle;
     }
 
