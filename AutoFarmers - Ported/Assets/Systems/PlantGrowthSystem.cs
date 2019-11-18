@@ -42,6 +42,14 @@ public class PlantGrowthSystem : JobComponentSystem
                     
                 };
                 ecb.SetComponent(index, entity, data);
+            } else
+            {
+                var data = new PlantComponent
+                {
+                    timeGrown = maxGrowth,
+
+                };
+                ecb.SetComponent(index, entity, data);
             }
             
         }

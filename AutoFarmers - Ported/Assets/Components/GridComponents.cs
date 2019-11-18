@@ -21,5 +21,5 @@ public struct EntityInfo : IComponentData
 
 // tile types
 [Serializable]
-public enum Tiles : int { None = 0, Rock = 1, Till = 2, Plant = 3, Store = 4};
+public enum Tiles : int { None = 0, Rock = 1, Till = 2, Plant = 3, Harvest=4, Store = 5,};
 

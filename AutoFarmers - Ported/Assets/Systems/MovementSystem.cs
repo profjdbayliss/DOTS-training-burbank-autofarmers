@@ -125,13 +125,15 @@ public class Movement : JobComponentSystem
                         ecb.AddComponent(index, entity, typeof(PerformTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
-                    //else if (intent.type == (int)Tiles.Store)
-                    //{
-                    //    Debug.Log("moving to harvest");
-                    //    //var data = new IntentionComponent { intent = (int)Intentions.MovingToHarvest };
-                    //    //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
-                    //    //ecb.SetComponent(index, entity, data);
-                    //}
+                    else if (intent.type == (int)Tiles.Harvest)
+                    {
+                        Debug.Log("moving to harvest");
+                        //var data = new IntentionComponent { intent = (int)Intentions.MovingToHarvest };
+                        //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                        //ecb.SetComponent(index, entity, data);
+                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
+                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                    }
                     //else if (intent.type == (int)Tiles.PerformHarvest)
                     //{
                     //    //Debug.Log("moving to plant");
@@ -233,6 +235,15 @@ public class Movement : JobComponentSystem
                         //var data = new IntentionComponent { intent = (int)Tiles.PerformPlanting };
                         //ecb.SetComponent(index, entity, data);
                         //Debug.Log("Performing plant");
+                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
+                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                    }
+                    else if (intent.type == (int)Tiles.Harvest)
+                    {
+                        Debug.Log("moving to harvest2");
+                        //var data = new IntentionComponent { intent = (int)Intentions.MovingToHarvest };
+                        //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
+                        //ecb.SetComponent(index, entity, data);
                         ecb.AddComponent(index, entity, typeof(PerformTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }

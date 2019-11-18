@@ -13,6 +13,7 @@ public class PerformTaskSystem : JobComponentSystem
     private EntityCommandBufferSystem ecbs;
     private static NativeArray<float2> tillChanges;
     private NativeArray<int> hasChanged; // variable to let me know when something changes the tillChanges array
+    private EntityQuery plantQuery;
 
     protected override void OnCreate()
     {
@@ -20,6 +21,13 @@ public class PerformTaskSystem : JobComponentSystem
         m_RockQuery = GetEntityQuery(new EntityQueryDesc
         {
             All = new[] { ComponentType.ReadOnly<RockTag>(), typeof(Translation) },
+
+        });
+
+
+        plantQuery = GetEntityQuery(new EntityQueryDesc
+		{
+			All = new[] { ComponentType.ReadOnly<PlantTag>(), typeof(Translation) },
 
         });
 
@@ -47,8 +55,8 @@ public class PerformTaskSystem : JobComponentSystem
         }
 
     }
-
-    protected override void OnDestroy()
+    
+protected override void OnDestroy()
     {
         if (tillChanges.IsCreated)
         {
@@ -60,6 +68,7 @@ public class PerformTaskSystem : JobComponentSystem
         {
             hasChanged.Dispose();
         }
+        
     }
 
     [RequireComponentTag(typeof(PerformTaskTag))]
@@ -79,7 +88,10 @@ public class PerformTaskSystem : JobComponentSystem
         public NativeArray<int> hasChanged; // only size one, but we pass by ref easily this way
 
         // var's specific to planting:
-        [ReadOnly] public Entity plantEntity;
+        //[ReadOnly] public Entity plantEntity;
+        //[DeallocateOnJobCompletion] [ReadOnly] public NativeArray<Translation> plantLocations;
+        //[DeallocateOnJobCompletion] [ReadOnly] public NativeArray<Entity> plantEntities;
+        //public int plantCount;
 
         public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref Rotation rotation, ref EntityInfo entityInfo)
         {
@@ -95,10 +107,10 @@ public class PerformTaskSystem : JobComponentSystem
             else if (entityInfo.type == (int)Tiles.Till)
             {
                 float tillBlockHeight = 0.25f;
-                EntityInfo harvestInfo = new EntityInfo { type = (int)Tiles.Till };
+                EntityInfo tillInfo = new EntityInfo { type = (int)Tiles.Till };
                 if (
                 grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
-                harvestInfo))
+                tillInfo))
                 {
                     float3 pos = new float3((int)translation.Value.x, tillBlockHeight, (int)translation.Value.z);
 
@@ -113,32 +125,33 @@ public class PerformTaskSystem : JobComponentSystem
             }
             else if (entityInfo.type == (int)Tiles.Plant)
             {
-                float plantingHeight = 1.0f;
-                EntityInfo plantInfo = new EntityInfo { type = (int)Tiles.Plant };
-                if (
-                grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
-                plantInfo))
-                {
-                    float3 pos = new float3((int)translation.Value.x, plantingHeight, (int)translation.Value.z);
+                // since the plant needs to be instantiated and then cached
+                // into the hash table it's done in the main thread
 
-                    var instance = ecb.Instantiate(index, plantEntity);
-                    ecb.SetComponent(index, instance, new Translation { Value = pos });
-                    ecb.SetComponent(index, instance, new NonUniformScale { Value = new float3(1.0f, 1.0f, 1.0f) });
-                    // for some reason the original plant mesh creation happens on the wrong axis, 
-                    // so we have to rotate it 90 degrees
-                    var newRot = rotation.Value * Quaternion.Euler(0, 0, 90);
-                    ecb.SetComponent(index, instance, new Rotation { Value = newRot });
-                    ecb.SetComponent(index, instance, new PlantComponent { timeGrown = 0 });
-                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
-                    //Debug.Log("added grid plant");
-                }
-                else
+                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+            }
+            else if (entityInfo.type == (int)Tiles.Harvest)
+            {
+                EntityInfo tillInfo = new EntityInfo { type = (int)Tiles.Till };
+
+                if (grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
+                tillInfo))
                 {
-                    //Debug.Log("did not add to plant");
-                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    // resetting the area to be till only and taking plant
+                    // FIX: next step is that the plant moves to the store with the farmer
+                    float3 pos = new float3((int)translation.Value.x, 5, (int)translation.Value.z);
+                    ecb.SetComponent(entityInfo.specificEntity.Index, entityInfo.specificEntity, 
+                        new Translation { Value = pos });
+
                 }
+                ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+            }
+
+            else if (entityInfo.type == (int)Tiles.Store)
+            {
+                // we need to sell the plant to the store
             }
 
         }
@@ -154,7 +167,7 @@ public class PerformTaskSystem : JobComponentSystem
         job.changes = tillChanges;
         job.hasChanged = this.hasChanged;
         job.grid = data.gridStatus.AsParallelWriter();
-        job.plantEntity = GridDataInitialization.plantEntity;
+
         JobHandle jobHandle = job.Schedule(this, inputDependencies);
         jobHandle.Complete();
 

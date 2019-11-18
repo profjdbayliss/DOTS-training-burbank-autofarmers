@@ -83,6 +83,10 @@ public class SearchSystem : JobComponentSystem
         [ReadOnly] public int nextIndex;
         [ReadOnly] public int gridSize;
         [ReadOnly] public int radiusForSearch;
+        // var specific to harvest task:
+        [ReadOnly] public ComponentDataFromEntity<PlantComponent> IsPlantType;
+        [ReadOnly] public float plantGrowthMax;
+
         public NativeArray<int> removals; // removal keys from hash table
         public NativeArray<int> hasChanged; // only size one, but we pass by ref easily this way
 
@@ -91,7 +95,7 @@ public class SearchSystem : JobComponentSystem
         {
             // magic numbers remaining - till radius and the 3 in task value
             int TILL_RADIUS = 5;
-            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 3) + 1;
+            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 4) + 1;
             //Debug.Log("finding new task : " + taskValue);
             float2 pos = new float2(translation.Value.x, translation.Value.z);
             float2 foundLocation;
@@ -103,14 +107,14 @@ public class SearchSystem : JobComponentSystem
             }
             else if (taskValue == (int)Tiles.Plant)
             {
-                // need to search for 2 which is the tilled soil
-                foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, 2, gridSize, gridSize);
+                // need to search for tilled soil
+                foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, (int)Tiles.Till, gridSize, gridSize);
 
             }
-            else if (taskValue == (int)Tiles.Store)
+            else if (taskValue == (int)Tiles.Harvest)
             {
-                // searches for the plants to go harvest them - 3
-                foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, 3, gridSize, gridSize);
+                // searches for the plants to go harvest them 
+                foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, (int)Tiles.Plant, gridSize, gridSize);
 
             }
             else // till only looks at things that don't exist in the grid - 0
@@ -201,16 +205,30 @@ public class SearchSystem : JobComponentSystem
                         EntityInfo plantData = new EntityInfo { type = (int)Tiles.Plant };
                         ecb.SetComponent(index, entity, plantData);
                     }
-                    else if (taskValue == (int)Tiles.Store)
+                    else if (taskValue == (int)Tiles.Harvest)
                     {
                         int key = GridData.ConvertToHash((int)foundLocation.x, (int)foundLocation.y);
-                        //gridHashMap.Remove(key);
-                        // FIX: should be interlocked add
-                        removals[index] = key;
-                        hasChanged[0]++;
-                        EntityInfo harvestData = new EntityInfo { type = (int)Tiles.Store };
-                        ecb.SetComponent(index, entity, harvestData);
-                        // Debug.Log("removed plant from location" + foundLocation);
+                        EntityInfo fullData = GridData.getFullHashValue(gridHashMap, (int)foundLocation.x, (int)foundLocation.y);
+
+                        // check to make sure plant is grown before harvesting
+                        // if it's not then find something else to do
+                        PlantComponent plantInfo = IsPlantType[fullData.specificEntity];
+                        if (plantInfo.timeGrown >= plantGrowthMax)
+                        {
+                            // FIX: should be interlocked add
+                            removals[index] = key;
+                            hasChanged[0]++;
+                            EntityInfo harvestData = new EntityInfo { type = (int)Tiles.Harvest, specificEntity = fullData.specificEntity };
+                            ecb.SetComponent(index, entity, harvestData);
+                            Debug.Log("plant ready to harvest at : " + foundLocation.x + " " + foundLocation.y);
+                        }
+                        else
+                        {
+                            // not ready to harvest, try something else
+                            ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                            ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                        }
+
                     } else if (taskValue == (int)Tiles.Till)
                     {
                         EntityInfo tillData = new EntityInfo { type = (int)Tiles.Till };                        
@@ -229,6 +247,7 @@ public class SearchSystem : JobComponentSystem
 
     protected override JobHandle OnUpdate(JobHandle inputDependencies)
     {
+        EntityManager entityManager = World.Active.EntityManager;
         GridData data = GridData.GetInstance();
         int index = System.Math.Abs(rand.NextInt()) % randomValues.Length;
         var job = new SearchSystemJob();
@@ -240,6 +259,8 @@ public class SearchSystem : JobComponentSystem
         job.radiusForSearch = 15;
         job.removals = hashRemovals;
         job.hasChanged = hasChanged;
+        job.IsPlantType = GetComponentDataFromEntity<PlantComponent>(true);
+        job.plantGrowthMax = PlantGrowthSystem.MAX_GROWTH;
 
         //Debug.Log("nextInt: " + (randomValues[(index) % randomValues.Length]%4 + 1));
         var jobHandle = job.Schedule(this, inputDependencies);
@@ -257,8 +278,38 @@ public class SearchSystem : JobComponentSystem
             {
                 int key = hashRemovals[i];
                 if (key != -1)
+
                 {
-                    data.gridStatus.Remove(key);
+                    EntityInfo value;
+                    if (data.gridStatus.TryGetValue(key, out value))
+                    {
+                        if (value.type == (int)Tiles.Till)
+                        {
+                            float plantingHeight = 1.0f;
+                            // we're planting here and need to add a plant entity
+                            data.gridStatus.Remove(key);
+                            float2 trans = new float2(GridData.getRow(key), GridData.getCol(key));
+                            var instance = entityManager.Instantiate(GridDataInitialization.plantEntity);
+                            EntityInfo plantInfo = new EntityInfo { type = (int)Tiles.Plant, specificEntity = instance };
+                            if (data.gridStatus.TryAdd(key, plantInfo))
+                            {
+                                float3 pos = new float3((int)trans.x, plantingHeight, (int)trans.y);
+                                entityManager.SetComponentData(instance, new Translation { Value = pos });
+                                entityManager.SetComponentData(instance, new NonUniformScale { Value = new float3(1.0f, 1.0f, 1.0f) });
+                                // for some reason the original plant mesh creation happens on the wrong axis, 
+                                // so we have to rotate it 90 degrees
+                                Rotation rotation = entityManager.GetComponentData<Rotation>(instance);
+                                var newRot = rotation.Value * Quaternion.Euler(0, 0, 90);
+                                entityManager.SetComponentData(instance, new Rotation { Value = newRot });
+                                entityManager.SetComponentData(instance, new PlantComponent { timeGrown = 0 });
+                                Debug.Log("added grid plant " + instance.Index);
+                            }
+                        } else
+                        {
+                            data.gridStatus.Remove(key);
+                        }
+                    } 
+                    
                     hashRemovals[i] = -1;
                 }
                 hasChanged[0] = 0; // nothing has been changed if it's a zero
