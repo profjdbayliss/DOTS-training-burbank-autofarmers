@@ -9,33 +9,12 @@ using static Unity.Mathematics.math;
 
 public class PerformTaskSystem : JobComponentSystem
 {
-    private EntityQuery m_RockQuery;
     private EntityCommandBufferSystem ecbs;
-    private static NativeArray<float2> tillChanges;
-    private NativeArray<int> hasChanged; // variable to let me know when something changes the tillChanges array
-    private EntityQuery plantQuery;
+    private static NativeQueue<float2> tillChanges;
 
     protected override void OnCreate()
     {
         ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
-        m_RockQuery = GetEntityQuery(new EntityQueryDesc
-        {
-            All = new[] { ComponentType.ReadOnly<RockTag>(), typeof(Translation) },
-
-        });
-
-
-        plantQuery = GetEntityQuery(new EntityQueryDesc
-		{
-			All = new[] { ComponentType.ReadOnly<PlantTag>(), typeof(Translation) },
-
-        });
-
-        // this is basically just a bool that gets passed by reference from
-        // being in an array to the job system
-        hasChanged = new NativeArray<int>(1, Allocator.Persistent);
-        hasChanged[0] = 0;
-
     }
 
     public static void InitializeTillSystem(int maxFarmers)
@@ -46,29 +25,17 @@ public class PerformTaskSystem : JobComponentSystem
         }
         else
         {
-            tillChanges = new NativeArray<float2>(maxFarmers, Allocator.Persistent);
-
-            for (int i = 0; i < maxFarmers; i++)
-            {
-                tillChanges[i] = new float2(-1, -1);
-            }
+            tillChanges = new NativeQueue<float2>(Allocator.Persistent);
         }
 
     }
-    
-protected override void OnDestroy()
+
+    protected override void OnDestroy()
     {
         if (tillChanges.IsCreated)
         {
             tillChanges.Dispose();
         }
-
-
-        if (hasChanged.IsCreated)
-        {
-            hasChanged.Dispose();
-        }
-        
     }
 
     [RequireComponentTag(typeof(PerformTaskTag))]
@@ -83,16 +50,7 @@ protected override void OnDestroy()
         [ReadOnly] public ComponentDataFromEntity<RockTag> IsRockType;
 
         // var's used by till task:
-        public NativeArray<float2> changes; // has all changes that max farmers could have made to their tiles
-                                            // during a job
-        public NativeArray<int> hasChanged; // only size one, but we pass by ref easily this way
-
-        // var's specific to planting:
-        //[ReadOnly] public Entity plantEntity;
-        //[DeallocateOnJobCompletion] [ReadOnly] public NativeArray<Translation> plantLocations;
-        //[DeallocateOnJobCompletion] [ReadOnly] public NativeArray<Entity> plantEntities;
-        //public int plantCount;
-
+        public NativeQueue<float2>.ParallelWriter changes;
 
         public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref Rotation rotation, ref EntityInfo entityInfo)
         {
@@ -114,10 +72,7 @@ protected override void OnDestroy()
                 {
                     float3 pos = new float3((int)translation.Value.x, tillBlockHeight, (int)translation.Value.z);
 
-                    changes[index] = new float2((int)pos.x, (int)pos.z);
-                    // 1 is true : set so that we only do the expensive uv changes across all entities if we need to
-                    // FIX: SHOULD BE AN INTERLOCKED ADD HERE FOR SAFETY
-                    hasChanged[0]++;
+                    changes.Enqueue(new float2((int)pos.x, (int)pos.z));
                 }
 
                 ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
@@ -127,7 +82,6 @@ protected override void OnDestroy()
             {
                 // since the plant needs to be instantiated and then cached
                 // into the hash table it's done in the main thread
-
                 ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
                 ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
             }
@@ -152,7 +106,7 @@ protected override void OnDestroy()
                 ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
             }
 
-            else if (entityInfo.type == (int)Tiles.Store )
+            else if (entityInfo.type == (int)Tiles.Store)
             {
                 // we need to remove the plant from the farmer
                 PlantComponent plantInfo = new PlantComponent
@@ -168,7 +122,7 @@ protected override void OnDestroy()
 
                 // and should actually sell stuff here
 
-            } 
+            }
 
         }
     }
@@ -180,51 +134,42 @@ protected override void OnDestroy()
         var job = new PerformTaskSystemJob();
         job.IsRockType = GetComponentDataFromEntity<RockTag>(true);
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
-        job.changes = tillChanges;
-        job.hasChanged = this.hasChanged;
+        job.changes = tillChanges.AsParallelWriter();
         job.grid = data.gridStatus.AsParallelWriter();
         JobHandle jobHandle = job.Schedule(this, inputDependencies);
         jobHandle.Complete();
 
         // we have to have a sync point here since we're about to change all uv's for the frame
         // This happens on main thread since uv's are Vector2 types and can't be changed inside of the job
-        if (hasChanged[0] != 0)
+        while (tillChanges.Count > 0)
         {
-            for (int i = 0; i < GridDataInitialization.MaxFarmers; i++)
+            float2 pos = tillChanges.Dequeue();
+            if ((int)pos.x != -1 && (int)pos.y != -1)
             {
-                float2 pos = tillChanges[i];
-                if ((int)pos.x != -1 && (int)pos.y != -1)
-                {
-                    // set the uv's on the mesh
-                    // NOTE: set pos to be a specific number for testing
-                    Mesh tmp = GridDataInitialization.getMesh((int)pos.x, (int)pos.y,
-                        GridDataInitialization.BoardWidth);
-                    int width = GridDataInitialization.getMeshWidth(tmp, (int)pos.x,
-                        (int)pos.y, GridDataInitialization.BoardWidth);
-                    //Debug.Log("changing uv at! " + pos + " " + width );
+                // set the uv's on the mesh
+                // NOTE: set pos to be a specific number if you want to test it
+                Mesh tmp = GridDataInitialization.getMesh((int)pos.x, (int)pos.y,
+                    GridDataInitialization.BoardWidth);
+                int width = GridDataInitialization.getMeshWidth(tmp, (int)pos.x,
+                    (int)pos.y, GridDataInitialization.BoardWidth);
+                //Debug.Log("changing uv at! " + pos + " " + width );
 
-                    Vector2[] uv = tmp.uv;
-                    TextureUV tex = GridDataInitialization.textures[(int)GridDataInitialization.BoardTypes.TilledDirt];
-                    int uvStartIndex = (GridDataInitialization.getPosForMesh((int)pos.y) +
-                        width *
-                        GridDataInitialization.getPosForMesh((int)pos.x)) * 4;
-                    uv[uvStartIndex] = new float2(tex.pixelStartX,
-                        tex.pixelStartY);
-                    uv[uvStartIndex + 1] = new float2(tex.pixelStartX,
-                        tex.pixelEndY);
-                    uv[uvStartIndex + 2] = new float2(tex.pixelEndX,
-                        tex.pixelEndY);
-                    uv[uvStartIndex + 3] = new float2(tex.pixelEndX,
-                        tex.pixelStartY);
-                    // then set the pos back to -1's
-                    tillChanges[i] = new float2(-1, -1);
-                    tmp.SetUVs(0, uv);
-                    tmp.MarkModified();
-                }
-                hasChanged[0] = 0; // nothing has been changed if it's a zero
+                Vector2[] uv = tmp.uv;
+                TextureUV tex = GridDataInitialization.textures[(int)GridDataInitialization.BoardTypes.TilledDirt];
+                int uvStartIndex = (GridDataInitialization.getPosForMesh((int)pos.y) +
+                    width *
+                    GridDataInitialization.getPosForMesh((int)pos.x)) * 4;
+                uv[uvStartIndex] = new float2(tex.pixelStartX,
+                    tex.pixelStartY);
+                uv[uvStartIndex + 1] = new float2(tex.pixelStartX,
+                    tex.pixelEndY);
+                uv[uvStartIndex + 2] = new float2(tex.pixelEndX,
+                    tex.pixelEndY);
+                uv[uvStartIndex + 3] = new float2(tex.pixelEndX,
+                    tex.pixelStartY);
+                tmp.SetUVs(0, uv);
+                tmp.MarkModified();
             }
-
-
         }
 
         return jobHandle;

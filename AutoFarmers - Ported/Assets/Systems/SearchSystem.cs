@@ -14,8 +14,7 @@ public class SearchSystem : JobComponentSystem
     public NativeArray<int> randomValues;
     public Unity.Mathematics.Random rand;
     const int RANDOM_SIZE = 256;
-    private static NativeArray<int> hashRemovals;
-    private NativeArray<int> hasChanged; // variable to let me know when something changes to hash table 
+    private static NativeQueue<int> hashRemovals;
 
 
     protected override void OnCreate()
@@ -27,10 +26,6 @@ public class SearchSystem : JobComponentSystem
         {
             randomValues[i] = System.Math.Abs(rand.NextInt());
         }
-        // this is basically just a bool that gets passed by reference from
-        // being in an array to the job system
-        hasChanged = new NativeArray<int>(1, Allocator.Persistent);
-        hasChanged[0] = 0;
 
     }
 
@@ -42,17 +37,12 @@ public class SearchSystem : JobComponentSystem
             hashRemovals.Dispose();
         }
 
-        if (hasChanged.IsCreated)
-        {
-            hasChanged.Dispose();
-        }
-           
         if (randomValues.IsCreated)
         {
             randomValues.Dispose();
         }
         base.OnDestroy();
-   
+
     }
 
     public static void InitializeSearchSystem(int maxFarmers)
@@ -63,12 +53,7 @@ public class SearchSystem : JobComponentSystem
         }
         else
         {
-            hashRemovals = new NativeArray<int>(maxFarmers, Allocator.Persistent);
-
-            for (int i = 0; i < maxFarmers; i++)
-            {
-                hashRemovals[i] = -1;
-            }
+            hashRemovals = new NativeQueue<int>(Allocator.Persistent);
         }
     }
 
@@ -87,10 +72,8 @@ public class SearchSystem : JobComponentSystem
         [ReadOnly] public ComponentDataFromEntity<PlantComponent> IsPlantType;
         [ReadOnly] public float plantGrowthMax;
 
-        public NativeArray<int> removals; // removal keys from hash table
-        [NativeDisableParallelForRestriction] public NativeArray<int> hasChanged; // only size one, but we pass by ref easily this way
+        public NativeQueue<int>.ParallelWriter removals;
 
-        //public enum Intentions : int { None = 0, Rock = 1, Till = 2, Plant = 3, Store = 4, PerformRock = 5, PerformTill = 6, PerformPlanting = 7, MovingToStore = 11 };
         public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref MovementComponent movementComponent, ref EntityInfo entityIntent)
         {
             // magic numbers remaining - till radius and the 3 in task value
@@ -176,10 +159,7 @@ public class SearchSystem : JobComponentSystem
                     ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
                     ecb.AddComponent(index, entity, typeof(MovingTag));
                     int key = GridData.ConvertToHash((int)rockPos.x, (int)rockPos.y);
-                    // FIX: should be interlocked add
-                    removals[index] = key;
-                    hasChanged[0]++;
-                    //gridHashMap.Remove(key);
+                    removals.Enqueue(key);
                 }
                 else
                 {
@@ -203,25 +183,16 @@ public class SearchSystem : JobComponentSystem
                         // get the index into the array of rocks so that we can find it
                         // to destroy it
                         EntityInfo fullRockData = GridData.getFullHashValue(gridHashMap, (int)rockPos.x, (int)rockPos.y);
-                        //int rockEntityIndex = GridData.getArrayLocation(fullRockData);
-                        //Entity tmp = rocks[rockEntityIndex];
-                        //RockInfo rockEntityInfo = new RockInfo { specificRock = tmp };
                         //Debug.Log("rock task happening : " + rockEntityIndex + " " + tmp.Index);
                         ecb.SetComponent(index, entity, fullRockData);
                         // remove the rock from the hash so that nobody else tries to get it
-                        //gridHashMap.Remove(key);
-                        // FIX: should be interlocked add
-                        removals[index] = key;
-                        hasChanged[0]++;
+                        removals.Enqueue(key);
                     }
                     else if (taskValue == (int)Tiles.Plant)
                     {
 
                         int key = GridData.ConvertToHash((int)foundLocation.x, (int)foundLocation.y);
-                        //gridHashMap.Remove(key);
-                        // FIX: should be interlocked add
-                        removals[index] = key;
-                        hasChanged[0]++;
+                        removals.Enqueue(key);
                         EntityInfo plantData = new EntityInfo { type = (int)Tiles.Plant };
                         ecb.SetComponent(index, entity, plantData);
                     }
@@ -235,9 +206,7 @@ public class SearchSystem : JobComponentSystem
                         PlantComponent plantInfo = IsPlantType[fullData.specificEntity];
                         if (plantInfo.timeGrown >= plantGrowthMax)
                         {
-                            // FIX: should be interlocked add
-                            removals[index] = key;
-                            hasChanged[0]++;
+                            removals.Enqueue(key);
                             EntityInfo harvestData = new EntityInfo { type = (int)Tiles.Harvest, specificEntity = fullData.specificEntity };
                             ecb.SetComponent(index, entity, harvestData);
                             //Debug.Log("plant ready to harvest at : " + foundLocation.x + " " + foundLocation.y);
@@ -252,13 +221,13 @@ public class SearchSystem : JobComponentSystem
                     }
                     else if (taskValue == (int)Tiles.Store)
                     {
-                        EntityInfo storeInfo = new EntityInfo { type = (int)Tiles.Store, specificEntity = entityIntent.specificEntity };            
+                        EntityInfo storeInfo = new EntityInfo { type = (int)Tiles.Store, specificEntity = entityIntent.specificEntity };
                         ecb.SetComponent(index, entity, storeInfo);
                         //Debug.Log("plant going to the store " + foundLocation.x + " " + foundLocation.y + " " + entityIntent.specificEntity.Index);
                     }
                     else if (taskValue == (int)Tiles.Till)
                     {
-                        EntityInfo tillData = new EntityInfo { type = (int)Tiles.Till };                        
+                        EntityInfo tillData = new EntityInfo { type = (int)Tiles.Till };
                         ecb.SetComponent(index, entity, tillData);
                     }
 
@@ -284,12 +253,10 @@ public class SearchSystem : JobComponentSystem
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.gridSize = data.width;
         job.radiusForSearch = 15;
-        job.removals = hashRemovals;
-        job.hasChanged = hasChanged;
+        job.removals = hashRemovals.AsParallelWriter();
         job.IsPlantType = GetComponentDataFromEntity<PlantComponent>(true);
         job.plantGrowthMax = PlantSystem.MAX_GROWTH;
 
-        //Debug.Log("nextInt: " + (randomValues[(index) % randomValues.Length]%4 + 1));
         var jobHandle = job.Schedule(this, inputDependencies);
         ecbs.AddJobHandleForProducer(jobHandle);
 
@@ -297,49 +264,41 @@ public class SearchSystem : JobComponentSystem
         jobHandle.Complete();
 
         // this happens in the main thread
-        // for some reason removal isn't in the parallel writer for the hash table
+        // removal isn't in the parallel writer for the hash table
         // so it's just going to have to happen sequentially
-        if (hasChanged[0] != 0)
-        {
-            for (int i = 0; i < GridDataInitialization.MaxFarmers; i++)
-            {
-                int key = hashRemovals[i];
-                if (key != -1)
 
+        while (hashRemovals.Count > 0)
+        {
+            int key = hashRemovals.Dequeue();
+            EntityInfo value;
+            if (data.gridStatus.TryGetValue(key, out value))
+            {
+                if (value.type == (int)Tiles.Till)
                 {
-                    EntityInfo value;
-                    if (data.gridStatus.TryGetValue(key, out value))
+                    float plantingHeight = 1.0f;
+                    // we're planting here and need to add a plant entity
+                    data.gridStatus.Remove(key);
+                    float2 trans = new float2(GridData.getRow(key), GridData.getCol(key));
+                    var instance = entityManager.Instantiate(GridDataInitialization.plantEntity);
+                    EntityInfo plantInfo = new EntityInfo { type = (int)Tiles.Plant, specificEntity = instance };
+                    if (data.gridStatus.TryAdd(key, plantInfo))
                     {
-                        if (value.type == (int)Tiles.Till)
-                        {
-                            float plantingHeight = 1.0f;
-                            // we're planting here and need to add a plant entity
-                            data.gridStatus.Remove(key);
-                            float2 trans = new float2(GridData.getRow(key), GridData.getCol(key));
-                            var instance = entityManager.Instantiate(GridDataInitialization.plantEntity);
-                            EntityInfo plantInfo = new EntityInfo { type = (int)Tiles.Plant, specificEntity = instance };
-                            if (data.gridStatus.TryAdd(key, plantInfo))
-                            {
-                                float3 pos = new float3((int)trans.x, plantingHeight, (int)trans.y);
-                                entityManager.SetComponentData(instance, new Translation { Value = pos });
-                                entityManager.SetComponentData(instance, new NonUniformScale { Value = new float3(1.0f, 1.0f, 1.0f) });
-                                // for some reason the original plant mesh creation happens on the wrong axis, 
-                                // so we have to rotate it 90 degrees
-                                Rotation rotation = entityManager.GetComponentData<Rotation>(instance);
-                                var newRot = rotation.Value * Quaternion.Euler(0, 0, 90);
-                                entityManager.SetComponentData(instance, new Rotation { Value = newRot });
-                                entityManager.SetComponentData(instance, new PlantComponent { timeGrown = 0, state = (int)PlantState.Growing });
-                                //Debug.Log("added grid plant " + instance.Index);
-                            }
-                        } else
-                        {
-                            data.gridStatus.Remove(key);
-                        }
-                    } 
-                    
-                    hashRemovals[i] = -1;
+                        float3 pos = new float3((int)trans.x, plantingHeight, (int)trans.y);
+                        entityManager.SetComponentData(instance, new Translation { Value = pos });
+                        entityManager.SetComponentData(instance, new NonUniformScale { Value = new float3(1.0f, 1.0f, 1.0f) });
+                        // for some reason the original plant mesh creation happens on the wrong axis, 
+                        // so we have to rotate it 90 degrees
+                        Rotation rotation = entityManager.GetComponentData<Rotation>(instance);
+                        var newRot = rotation.Value * Quaternion.Euler(0, 0, 90);
+                        entityManager.SetComponentData(instance, new Rotation { Value = newRot });
+                        entityManager.SetComponentData(instance, new PlantComponent { timeGrown = 0, state = (int)PlantState.Growing });
+                        //Debug.Log("added grid plant " + instance.Index);
+                    }
                 }
-                hasChanged[0] = 0; // nothing has been changed if it's a zero
+                else
+                {
+                    data.gridStatus.Remove(key);
+                }
             }
 
         }
