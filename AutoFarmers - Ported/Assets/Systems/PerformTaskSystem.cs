@@ -93,6 +93,7 @@ protected override void OnDestroy()
         //[DeallocateOnJobCompletion] [ReadOnly] public NativeArray<Entity> plantEntities;
         //public int plantCount;
 
+
         public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref Rotation rotation, ref EntityInfo entityInfo)
         {
 
@@ -101,7 +102,6 @@ protected override void OnDestroy()
                 //Debug.Log("destroying rock");
                 ecb.DestroyEntity(entityInfo.specificEntity.Index, entityInfo.specificEntity);
                 ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
-                //ecb.RemoveComponent(index, entity, typeof(EntityInfo));
                 ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
             }
             else if (entityInfo.type == (int)Tiles.Till)
@@ -138,21 +138,37 @@ protected override void OnDestroy()
                 if (grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
                 tillInfo))
                 {
-                    // resetting the area to be till only and taking plant
-                    // FIX: next step is that the plant moves to the store with the farmer
-                    float3 pos = new float3((int)translation.Value.x, 5, (int)translation.Value.z);
-                    ecb.SetComponent(entityInfo.specificEntity.Index, entityInfo.specificEntity, 
-                        new Translation { Value = pos });
-
+                    // plant needs to follow the farmer
+                    PlantComponent plantInfo = new PlantComponent
+                    {
+                        timeGrown = PlantSystem.MAX_GROWTH,
+                        state = (int)PlantState.Following,
+                        farmerToFollow = entity
+                    };
+                    ecb.SetComponent(entityInfo.specificEntity.Index,
+                         entityInfo.specificEntity, plantInfo);
                 }
                 ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
                 ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
             }
 
-            else if (entityInfo.type == (int)Tiles.Store)
+            else if (entityInfo.type == (int)Tiles.Store )
             {
-                // we need to sell the plant to the store
-            }
+                // we need to remove the plant from the farmer
+                PlantComponent plantInfo = new PlantComponent
+                {
+                    timeGrown = PlantSystem.MAX_GROWTH,
+                    state = (int)PlantState.Deleted
+                };
+
+                ecb.SetComponent(entityInfo.specificEntity.Index,
+                     entityInfo.specificEntity, plantInfo);
+                ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+
+                // and should actually sell stuff here
+
+            } 
 
         }
     }
@@ -167,7 +183,6 @@ protected override void OnDestroy()
         job.changes = tillChanges;
         job.hasChanged = this.hasChanged;
         job.grid = data.gridStatus.AsParallelWriter();
-
         JobHandle jobHandle = job.Schedule(this, inputDependencies);
         jobHandle.Complete();
 

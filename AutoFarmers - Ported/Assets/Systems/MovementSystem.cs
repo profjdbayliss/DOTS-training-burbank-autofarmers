@@ -101,46 +101,33 @@ public class Movement : JobComponentSystem
                     else if (intent.type == (int)Tiles.Rock)
                     {
                         //Debug.Log("performing rock1 now");
-                        //var data = new IntentionComponent {  intent = (int)Intentions.PerformRock };
-
-                        //ecb.SetComponent(index, entity, data);
-
                         ecb.AddComponent(index, entity, typeof(PerformTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
 
                     }
                     else if (intent.type == (int)Tiles.Till)
                     {
-                        //var data = new IntentionComponent { intent = (int)Intentions.PerformTill }; 
-                        //ecb.SetComponent(index, entity, data);
-
                         ecb.AddComponent(index, entity, typeof(PerformTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
                     else if (intent.type == (int)Tiles.Plant)
                     {
-                        //var data = new IntentionComponent { intent = (int)Intentions.PerformPlanting };
-                        //ecb.SetComponent(index, entity, data);
                         //Debug.Log("Performing plant");
                         ecb.AddComponent(index, entity, typeof(PerformTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
                     else if (intent.type == (int)Tiles.Harvest)
                     {
-                        Debug.Log("moving to harvest");
-                        //var data = new IntentionComponent { intent = (int)Intentions.MovingToHarvest };
-                        //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
-                        //ecb.SetComponent(index, entity, data);
+                        //Debug.Log("moving to harvest");
                         ecb.AddComponent(index, entity, typeof(PerformTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
-                    //else if (intent.type == (int)Tiles.PerformHarvest)
-                    //{
-                    //    //Debug.Log("moving to plant");
-                    //    var data = new IntentionComponent { intent = (int)Intentions.MovingToHarvest };
-                    //    //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
-                    //    ecb.SetComponent(index, entity, data);
-                    //}
+                    else if (intent.type == (int)Tiles.Store)
+                    {
+                        //Debug.Log("moving to store");
+                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
+                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                    }
                     else
                     {
                         ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
@@ -192,58 +179,32 @@ public class Movement : JobComponentSystem
                         var data = new MovementComponent { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, middlePos = new float2(-1, -1) };
                         ecb.SetComponent(index, entity, data);
                     }
-                    //               else if (actor.intent == (int)Intentions.MovingToHarvest)
-                    //               {
-                    //                   var data = new actor_RunTimeComp { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, intent = (int)Intentions.PerformHarvest, middlePos = new float2(-1, -1) };
-                    //                   ecb.SetComponent(index, entity, data);
-                    //                   //Debug.Log("performing harvest next");
-                    //                   ecb.AddComponent(index, entity, typeof(PerformHarvestTaskTag));
-                    //                   ecb.RemoveComponent(index, entity, typeof(MovingTag));
-                    //               }
-                    //else if (intent.type == (int)Tiles.Store)
-                    //{
-                    //    //Debug.Log("moving to harvest");
-                    //    var data = new IntentionComponent { intent = (int)Intentions.MovingToHarvest };
-                    //    //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
-                    //    ecb.SetComponent(index, entity, data);
-                    //}
-                    //else if (intent.type == (int)Intentions.PerformHarvest)
-                    //{
-                    //    //Debug.Log("moving to plant");
-                    //    var data = new IntentionComponent { intent = (int)Intentions.MovingToHarvest };
-                    //    //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
-                    //    ecb.SetComponent(index, entity, data);
-                    //}
                     else if (intent.type == (int)Tiles.Rock)
                     {
-                        //Debug.Log("performing rock now");
-                        //var data = new IntentionComponent { intent = (int)Tiles.PerformRock };
-                        //ecb.SetComponent(index, entity, data);
+                        //Debug.Log("performing rock now");                        
                         ecb.AddComponent<PerformTaskTag>(index, entity);
                         ecb.RemoveComponent<MovingTag>(index, entity);
                     }
                     else if (intent.type == (int)Tiles.Till)
                     {
-                        //var data = new IntentionComponent { intent = (int)Intentions.PerformTill };
-                       // ecb.SetComponent(index, entity, data);
-
                         ecb.AddComponent(index, entity, typeof(PerformTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
                     else if (intent.type == (int)Tiles.Plant)
                     {
-                        //var data = new IntentionComponent { intent = (int)Tiles.PerformPlanting };
-                        //ecb.SetComponent(index, entity, data);
                         //Debug.Log("Performing plant");
                         ecb.AddComponent(index, entity, typeof(PerformTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
                     else if (intent.type == (int)Tiles.Harvest)
                     {
-                        Debug.Log("moving to harvest2");
-                        //var data = new IntentionComponent { intent = (int)Intentions.MovingToHarvest };
-                        //ecb.SetComponent<actor_RunTimeComp>(index, entity, data);
-                        //ecb.SetComponent(index, entity, data);
+                        //Debug.Log("moving to harvest2");
+                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
+                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                    }
+                    else if (intent.type == (int)Tiles.Store)
+                    {
+                        //Debug.Log("moving to store2");
                         ecb.AddComponent(index, entity, typeof(PerformTaskTag));
                         ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }

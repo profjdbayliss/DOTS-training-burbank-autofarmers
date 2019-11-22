@@ -19,10 +19,6 @@ public class actor_authoring : MonoBehaviour, IConvertGameObjectToEntity
     {
         // Call methods on 'dstManager' to create runtime components on 'entity' here. Remember that:
         var data = new MovementComponent { startPos = startPos, speed = speed, targetPos = targetPos };
-        var intention = new IntentionComponent { intent = intent };
-           dstManager.AddComponentData(entity,data);
-        dstManager.AddComponentData(entity, intention);
-        
-        
+        dstManager.AddComponentData(entity,data);        
     }
 }
