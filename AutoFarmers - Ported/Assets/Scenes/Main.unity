@@ -195,7 +195,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 6570
   m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: 0, y: 0, z: -2.3062652e+18, w: 1.4618e-41}
+  m_BoundingSphereOverride: {x: 3.222e-42, y: 1.01e-43, z: 2.3509887e-38, w: 0}
   m_UseBoundingSphereOverride: 0
   m_ShadowRadius: 0
   m_ShadowAngle: 0
@@ -246,7 +246,7 @@ MonoBehaviour:
   boardWidth: 50
   rockSpawnAttempts: 30
   storeCount: 5
-  maxFarmers: 1000
+  maxFarmers: 50
   farmerNumber: 10
   RockPrefab: {fileID: 8408007631743160701, guid: 3eed0651058123240bd33f559d605398,
     type: 3}

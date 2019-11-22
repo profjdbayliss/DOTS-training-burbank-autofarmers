@@ -36,6 +36,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public static Entity farmerEntity;
     public static Entity tilledTileEntity;
     public static Entity plantEntity;
+    public static int farmerCount;
 
     // board size    
     public static int MAX_MESH_WIDTH = 64;
@@ -76,6 +77,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     {
         // set up max farmers for everything else
         MaxFarmers = maxFarmers;
+        farmerCount = 0;
         BoardWidth = boardWidth;
         PerformTaskSystem.InitializeTillSystem(maxFarmers);
         SearchSystem.InitializeSearchSystem(maxFarmers);
@@ -267,6 +269,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         Unity.Mathematics.Random rand = new Unity.Mathematics.Random(42);
         for (int i = 0; i < farmerNumber; i++)
         {
+            farmerCount++;
             var instance = entityManager.Instantiate(farmerEntity);
             int startX = Math.Abs(rand.NextInt()) % gdata.width;
             int startZ = Math.Abs(rand.NextInt()) % gdata.width;

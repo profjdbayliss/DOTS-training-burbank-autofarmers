@@ -16,7 +16,6 @@ public class SearchSystem : JobComponentSystem
     const int RANDOM_SIZE = 256;
     private static NativeQueue<int> hashRemovals;
 
-
     protected override void OnCreate()
     {
         rand = new Unity.Mathematics.Random(42);
@@ -71,7 +70,7 @@ public class SearchSystem : JobComponentSystem
         // var specific to harvest task:
         [ReadOnly] public ComponentDataFromEntity<PlantComponent> IsPlantType;
         [ReadOnly] public float plantGrowthMax;
-
+        // var for tilling
         public NativeQueue<int>.ParallelWriter removals;
 
         public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref MovementComponent movementComponent, ref EntityInfo entityIntent)
@@ -119,7 +118,16 @@ public class SearchSystem : JobComponentSystem
             }
             else // till only looks at things that don't exist in the grid - 0
             {
-                Unity.Mathematics.Random rand = new Unity.Mathematics.Random((uint)nextIndex);
+                Unity.Mathematics.Random rand;
+                if ((uint)nextIndex == 0)
+                {
+                    rand = new Unity.Mathematics.Random(10);
+                }
+                else
+                {
+                    rand = new Unity.Mathematics.Random((uint)nextIndex);
+                }
+
                 // we look for a default spot to put a tilled thing
                 float2 nextPos = new float2(Mathf.Abs(rand.NextInt()) % gridSize, Mathf.Abs(rand.NextInt()) % gridSize);
                 foundLocation = GridData.Search(gridHashMap, nextPos, TILL_RADIUS, 0, gridSize, gridSize);

@@ -11,10 +11,13 @@ public class PerformTaskSystem : JobComponentSystem
 {
     private EntityCommandBufferSystem ecbs;
     private static NativeQueue<float2> tillChanges;
+    private static Store storeInfo;
+    private static NativeQueue<int> plantsSold;
 
     protected override void OnCreate()
     {
         ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
+        plantsSold = new NativeQueue<int>(Allocator.Persistent);
     }
 
     public static void InitializeTillSystem(int maxFarmers)
@@ -36,6 +39,11 @@ public class PerformTaskSystem : JobComponentSystem
         {
             tillChanges.Dispose();
         }
+
+        if (plantsSold.IsCreated)
+        {
+            plantsSold.Dispose();
+        }
     }
 
     [RequireComponentTag(typeof(PerformTaskTag))]
@@ -51,6 +59,9 @@ public class PerformTaskSystem : JobComponentSystem
 
         // var's used by till task:
         public NativeQueue<float2>.ParallelWriter changes;
+
+        // var used by store:
+        public NativeQueue<int>.ParallelWriter plantsSold;
 
         public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref Rotation rotation, ref EntityInfo entityInfo)
         {
@@ -121,7 +132,7 @@ public class PerformTaskSystem : JobComponentSystem
                 ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
 
                 // and should actually sell stuff here
-
+                plantsSold.Enqueue(1);
             }
 
         }
@@ -136,7 +147,9 @@ public class PerformTaskSystem : JobComponentSystem
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.changes = tillChanges.AsParallelWriter();
         job.grid = data.gridStatus.AsParallelWriter();
+        job.plantsSold = plantsSold.AsParallelWriter();
         JobHandle jobHandle = job.Schedule(this, inputDependencies);
+
         jobHandle.Complete();
 
         // we have to have a sync point here since we're about to change all uv's for the frame
@@ -170,6 +183,41 @@ public class PerformTaskSystem : JobComponentSystem
                 tmp.SetUVs(0, uv);
                 tmp.MarkModified();
             }
+        }
+
+        // fairly rare occurrence
+        if (plantsSold.Count > 0)
+        {
+            EntityManager entityManager = World.Active.EntityManager;
+            storeInfo.moneyForFarmers += plantsSold.Count;
+            storeInfo.moneyForDrones += plantsSold.Count;
+            if (storeInfo.moneyForFarmers >= 10 && GridDataInitialization.farmerCount < GridDataInitialization.MaxFarmers)
+            {
+                Unity.Mathematics.Random rand = new Unity.Mathematics.Random(42);
+                // spawn a new farmer - never more than 1 a frame
+                storeInfo.moneyForFarmers -= 10;
+                var instance = entityManager.Instantiate(GridDataInitialization.farmerEntity);
+                GridDataInitialization.farmerCount++;
+                int startX = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
+                int startZ = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
+
+                // Place the instantiated entity in a grid with some noise
+                var position = new float3(startX, 2, startZ);
+                entityManager.SetComponentData(instance, new Translation() { Value = position });
+                var farmerData = new MovementComponent { startPos = new float2(startX, startZ), speed = 2, targetPos = new float2(startX, startZ) };
+                var entityData = new EntityInfo { type = -1 };
+                entityManager.SetComponentData(instance, farmerData);
+                entityManager.AddComponentData(instance, entityData);
+                // give his first command 
+                entityManager.AddComponent<NeedsTaskTag>(instance);
+            }
+
+            if (storeInfo.moneyForDrones >= 50)
+            {
+                // spawn a new drone
+                storeInfo.moneyForDrones -= 50;
+            }
+            plantsSold.Clear();
         }
 
         return jobHandle;
