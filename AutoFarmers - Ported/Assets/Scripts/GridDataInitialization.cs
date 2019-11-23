@@ -124,15 +124,15 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         meshPlantTmp = Instantiate(plantMesh);
         meshPlantFilter.sharedMesh = meshPlantTmp;
         plantEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(PlantMeshPrefab, World.Active);
-        //PlantComponent plantData = new PlantComponent
-        //{
-        //   timeGrown = 0
-        //};
+        PlantComponent plantData = new PlantComponent
+        {
+           timeGrown = 0
+        };
         entityManager.AddComponent(plantEntity, typeof(PlantTag));
         entityManager.SetComponentData(plantEntity, new Translation { Value = new float3(-1, -5, -1) });
-        //entityManager.AddComponentData(plantEntity, plantData);
+        entityManager.AddComponentData(plantEntity, plantData);
         entityManager.AddComponentData(plantEntity, new NonUniformScale { Value = new float3(1.0f, 2.0f, 1.0f) });
-        entityManager.AddComponentData(plantEntity, new PlantComponent { timeGrown = 0, state = (int)PlantState.None });
+        entityManager.SetComponentData(plantEntity, new PlantComponent { timeGrown = 0, state = (int)PlantState.None });
 
         // create atlas and texture info
         CreateAtlasData();

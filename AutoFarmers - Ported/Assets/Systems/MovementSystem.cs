@@ -128,9 +128,8 @@ public class Movement : JobComponentSystem
                     {
                         // we just hit the middle pos and so set things to go to target now
                         var data = new MovementComponent { myType = actor.myType, startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, middlePos = new float2(-1, -1) };
-                        //movementSet.Enqueue(new MovementSetData { entity = entity, movementData = data });
-                        actor = data;    
-                    // FIX: ecb throws errors for setting this component
+                        movementSet.Enqueue(new MovementSetData { entity = entity, movementData = data });
+                        // FIX: ecb throws errors for setting this component
                         //ecb.SetComponent(index, entity, data);
                     }
                     else if (intent.type == (int)Tiles.Rock || intent.type == (int)Tiles.Till ||
@@ -198,8 +197,7 @@ public class Movement : JobComponentSystem
                         //Debug.Log("just got to the middle" + actor.middlePos);
                         // we just hit the middle pos and so set things to go to target now
                         var data = new MovementComponent { myType = actor.myType, startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, middlePos = new float2(-1, -1) };
-                        actor = data;
-                        // movementSet.Enqueue(new MovementSetData { entity = entity, movementData = data });
+                        movementSet.Enqueue(new MovementSetData { entity = entity, movementData = data });
                         // FIX: ecb throws errors for setting this component
                         //ecb.SetComponent(index, entity, data);
                     }
@@ -265,11 +263,11 @@ public class Movement : JobComponentSystem
         jobHandle.Complete();
 
         EntityManager entityManager = World.Active.EntityManager;
-        //while (movementSetData.Count > 0)
-        //{
-        //    MovementSetData data = movementSetData.Dequeue();
-        //    entityManager.SetComponentData(data.entity, data.movementData);
-        //}
+        while (movementSetData.Count > 0)
+        {
+            MovementSetData data = movementSetData.Dequeue();
+            entityManager.SetComponentData(data.entity, data.movementData);
+        }
         while (addTagData.Count > 0)
         {
             TagData data = addTagData.Dequeue();
@@ -277,18 +275,11 @@ public class Movement : JobComponentSystem
                 entityManager.AddComponent(data.entity, typeof(NeedsTaskTag));
             else if (data.type == (int)TagTypes.PerformTaskTag)
                 entityManager.AddComponent(data.entity, typeof(PerformTaskTag));
-            else if (data.type == (int)TagTypes.MovingTag)
-                entityManager.AddComponent(data.entity, typeof(MovingTag));
         }
         while (removeTagData.Count > 0)
         {
             TagData data = removeTagData.Dequeue();
-            if (data.type == (int)TagTypes.NeedsTaskTag)
-                entityManager.RemoveComponent(data.entity, typeof(NeedsTaskTag));
-            else if (data.type == (int)TagTypes.PerformTaskTag)
-                entityManager.RemoveComponent(data.entity, typeof(PerformTaskTag));
-            else if (data.type == (int)TagTypes.MovingTag)
-                entityManager.RemoveComponent(data.entity, typeof(MovingTag));
+            entityManager.RemoveComponent(data.entity, typeof(MovingTag));
         }
 
         // Now that the job is set up, schedule it to be run. 

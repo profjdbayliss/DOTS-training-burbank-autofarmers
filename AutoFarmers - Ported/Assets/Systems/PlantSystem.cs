@@ -64,10 +64,8 @@ public class PlantSystem : JobComponentSystem
             ref PlantComponent plantComponent,
             ref NonUniformScale scale)
         {
-            //UnityEngine.Debug.Log("inside the plant method");
             if (plantComponent.state == (int)PlantState.None)
             {
-                
                 return;
             }
             else if (plantComponent.state == (int)PlantState.Growing)
@@ -85,9 +83,7 @@ public class PlantSystem : JobComponentSystem
                         state = (int)PlantState.Growing
 
                     };
-                    plantComponent = data;
-                    //UnityEngine.Debug.Log("growing the plant");
-                    //plantDataSet.Enqueue(new PlantDataSet { entity = entity, plantData= data, scale = newScale });
+                    plantDataSet.Enqueue(new PlantDataSet { entity = entity, plantData= data, scale = newScale });
                     // FIX : ecb doesn't like setting this data
                     //ecb.SetComponent(index, entity, data);
                 }
@@ -99,9 +95,7 @@ public class PlantSystem : JobComponentSystem
                         state = (int)PlantState.None
 
                     };
-                    plantComponent = data;
-                    UnityEngine.Debug.Log("plant growth done");
-                    //plantDataSet.Enqueue(new PlantDataSet { entity = entity, plantData = data, scale = scale });
+                    plantDataSet.Enqueue(new PlantDataSet { entity = entity, plantData = data, scale = scale });
                     // FIX : ecb doesn't like setting this data
                     //ecb.SetComponent(index, entity, data);
                 }
@@ -132,20 +126,17 @@ public class PlantSystem : JobComponentSystem
         JobHandle jobHandle = job.Schedule(this, inputDependencies);
         jobHandle.Complete();
         EntityManager entityManager = World.Active.EntityManager;
-        //while (plantDataSet.Count > 0)
-        //{
-        //    PlantDataSet data = plantDataSet.Dequeue();
-        //    entityManager.SetComponentData(data.entity, data.plantData);
-        //    entityManager.SetComponentData(data.entity, data.scale);
-        //}
-        
+        while (plantDataSet.Count > 0)
+        {
+            PlantDataSet data = plantDataSet.Dequeue();
+            entityManager.SetComponentData(data.entity, data.plantData);
+            entityManager.SetComponentData(data.entity, data.scale);
+        }
         while (plantTranslations.Count > 0)
         {
-            UnityEngine.Debug.Log("translations set for planting");
             PlantTranslations data = plantTranslations.Dequeue();
             entityManager.SetComponentData(data.entity, data.translation);
         }
-        
 
         return jobHandle;
     }

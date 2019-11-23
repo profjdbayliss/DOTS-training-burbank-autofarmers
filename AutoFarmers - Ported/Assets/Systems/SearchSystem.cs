@@ -159,12 +159,7 @@ public class SearchSystem : JobComponentSystem
             {
                 // searches for the plants to go harvest them 
                 foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, (int)Tiles.Plant, gridSize, gridSize);
-                if (foundLocation.x == -1)
-                {
-                    // nothing to harvest - look for a rock
-                    taskValue = (int)Tiles.Rock;
-                    foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, taskValue, gridSize, gridSize);
-                }
+
             }
             else if (taskValue == (int)Tiles.Store)
             {
@@ -195,7 +190,7 @@ public class SearchSystem : JobComponentSystem
 
             }
 
-            Debug.Log("finding new task : " + taskValue + " for entity " + index + " found " + foundLocation.x);
+            //Debug.Log("finding new task : " + taskValue + " for entity " + index + " found " + foundLocation.x);
 
             if (foundLocation.x != -1 && foundLocation.y != -1)
             {
@@ -241,8 +236,7 @@ public class SearchSystem : JobComponentSystem
 
                     var data = new MovementComponent { myType = movementComponent.myType, startPos = pos, speed = 2, targetPos = foundLocation, middlePos = findMiddle };
                     //ecb.SetComponent(index, entity, data);
-                    movementComponent = data;
-                    //movementSet.Enqueue(new MovementSetData { entity = entity, movementData = data });
+                    movementSet.Enqueue(new MovementSetData { entity = entity, movementData = data });
 
                     //ecb.SetComponent(index, entity, intention);
 
@@ -291,7 +285,7 @@ public class SearchSystem : JobComponentSystem
                             EntityInfo harvestData = new EntityInfo { type = (int)Tiles.Harvest, specificEntity = fullData.specificEntity };
                             entityInfoSet.Enqueue(new EntityInfoData { entity = entity, entityData = harvestData });
                             //ecb.SetComponent(index, entity, harvestData);
-                            Debug.Log("plant ready to harvest at : " + foundLocation.x + " " + foundLocation.y);
+                            //Debug.Log("plant ready to harvest at : " + foundLocation.x + " " + foundLocation.y);
                         }
                         else
                         {
@@ -350,16 +344,16 @@ public class SearchSystem : JobComponentSystem
         job.movementSet = movementSetData.AsParallelWriter();
 
         var jobHandle = job.Schedule(this, inputDependencies);
-        //ecbs.AddJobHandleForProducer(jobHandle);
+        ecbs.AddJobHandleForProducer(jobHandle);
 
         // forced to sync here to remove all hash items at the same time
         jobHandle.Complete();
 
-        //while (movementSetData.Count > 0)
-        //{
-        //    MovementSetData moveData = movementSetData.Dequeue();
-        //    entityManager.SetComponentData(moveData.entity, moveData.movementData);
-        //}
+        while (movementSetData.Count > 0)
+        {
+            MovementSetData moveData = movementSetData.Dequeue();
+            entityManager.SetComponentData(moveData.entity, moveData.movementData);
+        }
 
         while (addTagData.Count > 0)
         {
@@ -368,7 +362,7 @@ public class SearchSystem : JobComponentSystem
                 entityManager.AddComponent(tagData.entity, typeof(NeedsTaskTag));
             else if (tagData.type == (int)TagTypes.PerformTaskTag)
                 entityManager.AddComponent(tagData.entity, typeof(PerformTaskTag));
-            else if(tagData.type == (int)TagTypes.MovingTag)
+            else
                 entityManager.AddComponent(tagData.entity, typeof(MovingTag));
         }
         while (removeTagData.Count > 0)
@@ -378,7 +372,7 @@ public class SearchSystem : JobComponentSystem
                 entityManager.RemoveComponent(tagData.entity, typeof(NeedsTaskTag));
             else if (tagData.type == (int)TagTypes.PerformTaskTag)
                 entityManager.RemoveComponent(tagData.entity, typeof(PerformTaskTag));
-            else if(tagData.type == (int)TagTypes.MovingTag)
+            else
                 entityManager.RemoveComponent(tagData.entity, typeof(MovingTag));
         }
         while (entityInfoData.Count > 0)
@@ -404,7 +398,7 @@ public class SearchSystem : JobComponentSystem
                     data.gridStatus.Remove(key);
                     float2 trans = new float2(GridData.getRow(key), GridData.getCol(key));
                     var instance = entityManager.Instantiate(GridDataInitialization.plantEntity);
-                    EntityInfo plantInfo = new EntityInfo { type = (int)Tiles.Plant, specificEntity = instance  };
+                    EntityInfo plantInfo = new EntityInfo { type = (int)Tiles.Plant, specificEntity = instance };
                     if (data.gridStatus.TryAdd(key, plantInfo))
                     {
                         float3 pos = new float3((int)trans.x, plantingHeight, (int)trans.y);
@@ -416,7 +410,7 @@ public class SearchSystem : JobComponentSystem
                         var newRot = rotation.Value * Quaternion.Euler(0, 0, 90);
                         entityManager.SetComponentData(instance, new Rotation { Value = newRot });
                         entityManager.SetComponentData(instance, new PlantComponent { timeGrown = 0, state = (int)PlantState.Growing });
-                        Debug.Log("added grid plant " + instance.Index);
+                        //Debug.Log("added grid plant " + instance.Index);
                     }
                 }
                 else
