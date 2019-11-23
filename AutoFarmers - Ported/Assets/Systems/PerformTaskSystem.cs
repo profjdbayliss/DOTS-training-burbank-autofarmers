@@ -129,6 +129,7 @@ public class PerformTaskSystem : JobComponentSystem
 
                     changes.Enqueue(new float2((int)pos.x, (int)pos.z));
                 }
+                Debug.Log("performing till");
                 // FIX: ecb fails on tag removal/adding with burst
                 addTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.NeedsTaskTag });
                 removeTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.PerformTaskTag });
@@ -142,6 +143,7 @@ public class PerformTaskSystem : JobComponentSystem
                 // FIX: ecb fails on tag removal/adding with burst
                 addTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.NeedsTaskTag });
                 removeTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.PerformTaskTag });
+                Debug.Log("performing plant");
                 //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
                 //ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
             }
@@ -224,7 +226,7 @@ public class PerformTaskSystem : JobComponentSystem
         EntityManager entityManager = World.Active.EntityManager;
         while (plantDataSet.Count > 0)
         {
-            
+            UnityEngine.Debug.Log("doing plants");
             PlantDataSet plantData = plantDataSet.Dequeue();
             entityManager.SetComponentData(plantData.entity, plantData.plantData);
 
@@ -232,6 +234,7 @@ public class PerformTaskSystem : JobComponentSystem
         while (addTagData.Count > 0)
         {
             TagData tagData = addTagData.Dequeue();
+            UnityEngine.Debug.Log("adding tag: " + tagData.type);
             if (tagData.type == (int)TagTypes.NeedsTaskTag)
                 entityManager.AddComponent(tagData.entity, typeof(NeedsTaskTag));
             else if (tagData.type == (int)TagTypes.PerformTaskTag)
@@ -240,6 +243,7 @@ public class PerformTaskSystem : JobComponentSystem
         while (removeTagData.Count > 0)
         {
             TagData tagData = removeTagData.Dequeue();
+            UnityEngine.Debug.Log("removing tag: " + tagData.type);
             if (tagData.type == (int)TagTypes.NeedsTaskTag)
                 entityManager.RemoveComponent(tagData.entity, typeof(NeedsTaskTag));
             else if (tagData.type == (int)TagTypes.PerformTaskTag)
