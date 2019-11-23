@@ -28,7 +28,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public GameObject PlantMeshPrefab;
     public GameObject TilePrefab;
     public GameObject FarmerPrefab;
-    //public Material plantMaterial;
+    public GameObject DronePrefab;
 
     // entity information for converted things
     EntityManager entityManager;
@@ -36,7 +36,10 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public static Entity farmerEntity;
     public static Entity tilledTileEntity;
     public static Entity plantEntity;
+    public static Entity droneEntity;
     public static int farmerCount;
+    public static int droneCount;
+    public static int maxDrones;
 
     // board size    
     public static int MAX_MESH_WIDTH = 64;
@@ -71,13 +74,18 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         referencedPrefabs.Add(RockPrefab);
         referencedPrefabs.Add(StorePrefab);
         referencedPrefabs.Add(PlantMeshPrefab);
+        referencedPrefabs.Add(DronePrefab);
     }
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
+        //Application.targetFrameRate = 1000;
+        //QualitySettings.vSyncCount = 0;
         // set up max farmers for everything else
         MaxFarmers = maxFarmers;
         farmerCount = 0;
+        droneCount = 0;
+        maxDrones = 10;
         BoardWidth = boardWidth;
         PerformTaskSystem.InitializeTillSystem(maxFarmers);
         SearchSystem.InitializeSearchSystem(maxFarmers);
@@ -101,6 +109,11 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         rockEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(RockPrefab, World.Active);
         entityManager.AddComponentData(rockEntity, new RockTag { });
 
+        // generate drone entities
+        droneEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(DronePrefab, World.Active);
+        entityManager.AddComponentData(droneEntity, new DroneTag { });
+        entityManager.AddComponentData(droneEntity, new MovementComponent { myType = 1 });
+        entityManager.AddComponentData(droneEntity, new EntityInfo { type = -1 });
 
         // generate the first plant to use for everything
         plantMesh = GeneratePlantMesh(42);
@@ -277,7 +290,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
             // Place the instantiated entity in a grid with some noise
             var position = new float3(startX, 2, startZ);
             entityManager.SetComponentData(instance, new Translation() { Value = position });
-            var data = new MovementComponent { startPos = new float2(startX, startZ), speed = 2, targetPos = new float2(startX, startZ) };
+            var data = new MovementComponent { myType = (int)MovingType.Farmer, startPos = new float2(startX, startZ), speed = 2, targetPos = new float2(startX, startZ) };
             //var intention = new IntentionComponent { intent = -1 };
             var entityData = new EntityInfo { type = -1 };
             entityManager.SetComponentData(instance, data);
@@ -441,7 +454,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
 
         }
 
-        atlas.alphaIsTransparency = true;
+        //atlas.alphaIsTransparency = true;
         atlas.wrapMode = TextureWrapMode.Clamp;
         atlas.filterMode = FilterMode.Point;
 

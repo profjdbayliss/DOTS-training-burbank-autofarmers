@@ -43,7 +43,7 @@ RenderSettings:
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
-  serializedVersion: 11
+  serializedVersion: 12
   m_GIWorkflowMode: 0
   m_GISettings:
     serializedVersion: 2
@@ -98,7 +98,8 @@ LightmapSettings:
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
   m_LightingDataAsset: {fileID: 0}
-  m_UseShadowmask: 1
+  m_LightingSettings: {fileID: 4890085278179872738, guid: da712b25d7dab7347b0387347f8685a0,
+    type: 2}
 --- !u!196 &4
 NavMeshSettings:
   serializedVersion: 2
@@ -195,7 +196,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 6570
   m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: 3.222e-42, y: 1.01e-43, z: 2.3509887e-38, w: 0}
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 980710.94, w: 0}
   m_UseBoundingSphereOverride: 0
   m_ShadowRadius: 0
   m_ShadowAngle: 0
@@ -243,11 +244,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 776a6caafaf5da94e9fe1d7a365e0b0d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boardWidth: 50
-  rockSpawnAttempts: 30
-  storeCount: 5
-  maxFarmers: 50
-  farmerNumber: 10
+  boardWidth: 512
+  rockSpawnAttempts: 3000
+  storeCount: 300
+  maxFarmers: 100
+  farmerNumber: 20
   RockPrefab: {fileID: 8408007631743160701, guid: 3eed0651058123240bd33f559d605398,
     type: 3}
   StorePrefab: {fileID: 1660769586978544541, guid: fb61399e21e6d694a94f8759b74fef5c,
@@ -257,6 +258,8 @@ MonoBehaviour:
   TilePrefab: {fileID: 2601290596335315882, guid: f2e402a1632534a94bff76fa5868b0fc,
     type: 3}
   FarmerPrefab: {fileID: 6225222254032698798, guid: b57347db48292a1498f043cf8e5e9704,
+    type: 3}
+  DronePrefab: {fileID: 1892626848910304248, guid: c1e2c57ef27388142a9683875c99867f,
     type: 3}
 --- !u!4 &844700566
 Transform:
@@ -270,7 +273,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 2
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &844700567
 MonoBehaviour:
@@ -362,53 +365,10 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 50, z: 0}
+  m_LocalPosition: {x: 230, y: 150, z: 75}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 705507995}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
---- !u!1 &979446185
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 979446187}
-  - component: {fileID: 979446186}
-  m_Layer: 0
-  m_Name: GridData
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &979446186
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 979446185}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f397c1d4da97e8445aaaa1fc72a1237e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!4 &979446187
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 979446185}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5, y: 0, z: 5}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

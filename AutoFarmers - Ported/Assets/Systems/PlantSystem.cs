@@ -12,10 +12,41 @@ public class PlantSystem : JobComponentSystem
     public static float MAX_GROWTH = 120.0f;
     private EntityCommandBufferSystem ecbs;
     private float deltaTime;
+    private static NativeQueue<PlantDataSet> plantDataSet;
+    private static NativeQueue<PlantTranslations> plantTranslations;
 
     protected override void OnCreate()
     {
         ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
+        plantDataSet = new NativeQueue<PlantDataSet>(Allocator.Persistent);
+        plantTranslations = new NativeQueue<PlantTranslations>(Allocator.Persistent);
+
+    }
+
+    public struct PlantDataSet
+    {
+        public Entity entity;
+        public PlantComponent plantData;
+        public NonUniformScale scale;
+    }
+
+    public struct PlantTranslations
+    {
+        public Entity entity;
+        public Translation translation;
+    }
+
+    protected override void OnDestroy()
+    {
+        if (plantDataSet.IsCreated)
+        {
+            plantDataSet.Dispose();
+        }
+        if (plantTranslations.IsCreated)
+        {
+            plantTranslations.Dispose();
+        }
+        base.OnDestroy();
     }
 
     [BurstCompile]
@@ -26,6 +57,8 @@ public class PlantSystem : JobComponentSystem
         [ReadOnly] public ComponentDataFromEntity<Translation> translations;
         [ReadOnly] public float maxGrowth;
         public EntityCommandBuffer.Concurrent ecb;
+        public NativeQueue<PlantDataSet>.ParallelWriter plantDataSet;
+        public NativeQueue<PlantTranslations>.ParallelWriter plantTranslations;
 
         public void Execute(Entity entity, int index, 
             ref PlantComponent plantComponent,
@@ -42,14 +75,17 @@ public class PlantSystem : JobComponentSystem
                 if (currentTotalTime < maxGrowth)
                 {
                     float currentScale = currentTotalTime / 10.0f;
-                    ecb.SetComponent(index, entity, new NonUniformScale { Value = new float3(currentScale, 1.0f, currentScale) });
+                    NonUniformScale newScale = new NonUniformScale { Value = float3(currentScale, 1.0f, currentScale) };
+                    //ecb.SetComponent(index, entity, new NonUniformScale { Value = new float3(currentScale, 1.0f, currentScale) });
                     var data = new PlantComponent
                     {
                         timeGrown = currentTotalTime,
                         state = (int)PlantState.Growing
 
                     };
-                    ecb.SetComponent(index, entity, data);
+                    plantDataSet.Enqueue(new PlantDataSet { entity = entity, plantData= data, scale = newScale });
+                    // FIX : ecb doesn't like setting this data
+                    //ecb.SetComponent(index, entity, data);
                 }
                 else
                 {
@@ -59,12 +95,17 @@ public class PlantSystem : JobComponentSystem
                         state = (int)PlantState.None
 
                     };
-                    ecb.SetComponent(index, entity, data);
+                    plantDataSet.Enqueue(new PlantDataSet { entity = entity, plantData = data, scale = scale });
+                    // FIX : ecb doesn't like setting this data
+                    //ecb.SetComponent(index, entity, data);
                 }
             } else if (plantComponent.state == (int)PlantState.Following)
             {
                 float3 pos = translations[plantComponent.farmerToFollow].Value;
-                ecb.SetComponent(index, entity, new Translation { Value = new float3(pos.x, pos.y+2, pos.z) });              
+                Translation trans = new Translation { Value = new float3(pos.x, pos.y + 2, pos.z) };
+                plantTranslations.Enqueue(new PlantTranslations { entity = entity, translation = trans });
+                // FIX : ecb doesn't like setting this data
+                //ecb.SetComponent(index, entity, new Translation { Value = new float3(pos.x, pos.y+2, pos.z) });              
             }
             else if (plantComponent.state == (int)PlantState.Deleted)
             {
@@ -80,7 +121,23 @@ public class PlantSystem : JobComponentSystem
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.maxGrowth = MAX_GROWTH;
         job.translations = GetComponentDataFromEntity<Translation>(true);
+        job.plantDataSet = plantDataSet.AsParallelWriter();
+        job.plantTranslations = plantTranslations.AsParallelWriter();
+        JobHandle jobHandle = job.Schedule(this, inputDependencies);
+        jobHandle.Complete();
+        EntityManager entityManager = World.Active.EntityManager;
+        while (plantDataSet.Count > 0)
+        {
+            PlantDataSet data = plantDataSet.Dequeue();
+            entityManager.SetComponentData(data.entity, data.plantData);
+            entityManager.SetComponentData(data.entity, data.scale);
+        }
+        while (plantTranslations.Count > 0)
+        {
+            PlantTranslations data = plantTranslations.Dequeue();
+            entityManager.SetComponentData(data.entity, data.translation);
+        }
 
-        return job.Schedule(this, inputDependencies);
+        return jobHandle;
     }
 }

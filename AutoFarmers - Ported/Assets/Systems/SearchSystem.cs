@@ -15,6 +15,10 @@ public class SearchSystem : JobComponentSystem
     public Unity.Mathematics.Random rand;
     const int RANDOM_SIZE = 256;
     private static NativeQueue<int> hashRemovals;
+    private static NativeQueue<TagData> addTagData;
+    private static NativeQueue<TagData> removeTagData;
+    private static NativeQueue<EntityInfoData> entityInfoData;
+    private static NativeQueue<MovementSetData> movementSetData;
 
     protected override void OnCreate()
     {
@@ -25,7 +29,10 @@ public class SearchSystem : JobComponentSystem
         {
             randomValues[i] = System.Math.Abs(rand.NextInt());
         }
-
+        addTagData = new NativeQueue<TagData>(Allocator.Persistent);
+        removeTagData = new NativeQueue<TagData>(Allocator.Persistent);
+        entityInfoData = new NativeQueue<EntityInfoData>(Allocator.Persistent);
+        movementSetData = new NativeQueue<MovementSetData>(Allocator.Persistent);
     }
 
 
@@ -40,8 +47,35 @@ public class SearchSystem : JobComponentSystem
         {
             randomValues.Dispose();
         }
+
+        if (addTagData.IsCreated)
+        {
+            addTagData.Dispose();
+        }
+
+        if (removeTagData.IsCreated)
+        {
+            removeTagData.Dispose();
+        }
+
+        if (entityInfoData.IsCreated)
+        {
+           entityInfoData.Dispose();
+        }
+
+        if (movementSetData.IsCreated)
+        {
+            movementSetData.Dispose();
+        }
+
         base.OnDestroy();
 
+    }
+
+    public struct EntityInfoData
+    {
+        public Entity entity;
+        public EntityInfo entityData;
     }
 
     public static void InitializeSearchSystem(int maxFarmers)
@@ -72,17 +106,39 @@ public class SearchSystem : JobComponentSystem
         [ReadOnly] public float plantGrowthMax;
         // var for tilling
         public NativeQueue<int>.ParallelWriter removals;
+        public NativeQueue<TagData>.ParallelWriter addTagSet;
+        public NativeQueue<TagData>.ParallelWriter removeTagSet;
+        public NativeQueue<EntityInfoData>.ParallelWriter entityInfoSet;
+        public NativeQueue<MovementSetData>.ParallelWriter movementSet;
 
         public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref MovementComponent movementComponent, ref EntityInfo entityIntent)
         {
             // magic numbers remaining - till radius and the 3 in task value
-            int TILL_RADIUS = 5;
-            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 4) + 1;
-            if (entityIntent.type == (int)Tiles.Harvest)
+            //int TILL_RADIUS = 5;
+            int taskValue = 0;
+
+            if (movementComponent.myType == (int)MovingType.Farmer)
             {
-                // we just harvested and now need to get the plant
-                // to the store
-                taskValue = (int)Tiles.Store;
+                // this is a farmer and needs farmer tasks
+                taskValue = (randArray[(nextIndex + index) % randArray.Length] % 4) + 1;
+                if (entityIntent.type == (int)Tiles.Harvest)
+                {
+                    // we just harvested and now need to get the plant
+                    // to the store
+                    taskValue = (int)Tiles.Store;
+                }
+            } else  
+            {
+                // this is a drone and needs drone tasks
+                if (entityIntent.type == (int)Tiles.Harvest)
+                {
+                    // we just harvested and now need to get the plant
+                    // to the store
+                    taskValue = (int)Tiles.Store;
+                } else
+                {
+                    taskValue = (int)Tiles.Harvest;
+                }
             }
 
             float2 pos = new float2(translation.Value.x, translation.Value.z);
@@ -130,7 +186,7 @@ public class SearchSystem : JobComponentSystem
 
                 // we look for a default spot to put a tilled thing
                 float2 nextPos = new float2(Mathf.Abs(rand.NextInt()) % gridSize, Mathf.Abs(rand.NextInt()) % gridSize);
-                foundLocation = GridData.Search(gridHashMap, nextPos, TILL_RADIUS, 0, gridSize, gridSize);
+                foundLocation = GridData.Search(gridHashMap, nextPos, radiusForSearch, 0, gridSize, gridSize);
 
             }
 
@@ -154,18 +210,22 @@ public class SearchSystem : JobComponentSystem
                     //Debug.Log("Updated rock position to: " + rockPos + "Actor is now chasing a rock");
 
                     rockPos = new float2(rockPos.x + 0.5f, rockPos.y + 0.5f);
-                    var data = new MovementComponent { startPos = pos, speed = 2, targetPos = rockPos, middlePos = findMiddle };
+                    var data = new MovementComponent { myType = movementComponent.myType, startPos = pos, speed = 2, targetPos = rockPos, middlePos = findMiddle };
                     //var intention = new IntentionComponent { intent = (int)Tiles.Rock };
                     // get the index into the array of rocks so that we can find it
                     // to destroy it
                     EntityInfo fullRockData = GridData.getFullHashValue(gridHashMap, (int)rockPos.x, (int)rockPos.y);
-                    ecb.SetComponent(index, entity, fullRockData);
+                    entityInfoSet.Enqueue(new EntityInfoData { entity = entity, entityData = fullRockData });
+                    //ecb.SetComponent(index, entity, fullRockData);
                     //Debug.Log("rock task happening : " + rockEntityIndex + " " + tmp.Index);
 
                     movementComponent = data;
-                    //entityIntent = intention;
-                    ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
-                    ecb.AddComponent(index, entity, typeof(MovingTag));
+                    // FIX: ecb doesn't burst compile with tags
+                    addTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.MovingTag });
+                    removeTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.NeedsTaskTag });
+
+                    //ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
+                    //ecb.AddComponent(index, entity, typeof(MovingTag));
                     int key = GridData.ConvertToHash((int)rockPos.x, (int)rockPos.y);
                     removals.Enqueue(key);
                 }
@@ -174,16 +234,21 @@ public class SearchSystem : JobComponentSystem
 
                     foundLocation = new float2(foundLocation.x + 0.5f, foundLocation.y + 0.5f);
 
-                    var data = new MovementComponent { startPos = pos, speed = 2, targetPos = foundLocation, middlePos = findMiddle };
-                    ecb.SetComponent(index, entity, data);
-                    //var intention = new IntentionComponent { intent = taskValue };
+                    var data = new MovementComponent { myType = movementComponent.myType, startPos = pos, speed = 2, targetPos = foundLocation, middlePos = findMiddle };
+                    //ecb.SetComponent(index, entity, data);
+                    movementSet.Enqueue(new MovementSetData { entity = entity, movementData = data });
+
                     //ecb.SetComponent(index, entity, intention);
 
                     //Debug.Log("doing a task and about to move: " + pos.x + " " + pos.y +
                     //    " target is : " + data.targetPos.x + " " + data.targetPos.y);
                     //Debug.Log("rock value: " + rockPos);
-                    ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
-                    ecb.AddComponent(index, entity, typeof(MovingTag));
+                    // FIX: ecb doesn't burst compile with tags
+                    addTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.MovingTag });
+                    removeTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.NeedsTaskTag });
+
+                    //ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
+                    //ecb.AddComponent(index, entity, typeof(MovingTag));
 
                     if (taskValue == (int)Tiles.Rock)
                     {
@@ -192,7 +257,8 @@ public class SearchSystem : JobComponentSystem
                         // to destroy it
                         EntityInfo fullRockData = GridData.getFullHashValue(gridHashMap, (int)rockPos.x, (int)rockPos.y);
                         //Debug.Log("rock task happening : " + rockEntityIndex + " " + tmp.Index);
-                        ecb.SetComponent(index, entity, fullRockData);
+                        entityInfoSet.Enqueue(new EntityInfoData { entity = entity, entityData = fullRockData });
+                        //ecb.SetComponent(index, entity, fullRockData);
                         // remove the rock from the hash so that nobody else tries to get it
                         removals.Enqueue(key);
                     }
@@ -202,7 +268,8 @@ public class SearchSystem : JobComponentSystem
                         int key = GridData.ConvertToHash((int)foundLocation.x, (int)foundLocation.y);
                         removals.Enqueue(key);
                         EntityInfo plantData = new EntityInfo { type = (int)Tiles.Plant };
-                        ecb.SetComponent(index, entity, plantData);
+                        entityInfoSet.Enqueue(new EntityInfoData { entity = entity, entityData = plantData });
+                        //ecb.SetComponent(index, entity, plantData);
                     }
                     else if (taskValue == (int)Tiles.Harvest)
                     {
@@ -216,27 +283,34 @@ public class SearchSystem : JobComponentSystem
                         {
                             removals.Enqueue(key);
                             EntityInfo harvestData = new EntityInfo { type = (int)Tiles.Harvest, specificEntity = fullData.specificEntity };
-                            ecb.SetComponent(index, entity, harvestData);
+                            entityInfoSet.Enqueue(new EntityInfoData { entity = entity, entityData = harvestData });
+                            //ecb.SetComponent(index, entity, harvestData);
                             //Debug.Log("plant ready to harvest at : " + foundLocation.x + " " + foundLocation.y);
                         }
                         else
                         {
                             // not ready to harvest, try something else
-                            ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                            ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                            // FIX: ecb doesn't burst compile with tags
+                            addTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.NeedsTaskTag });
+                            removeTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.MovingTag });
+
+                            //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                            //ecb.RemoveComponent(index, entity, typeof(MovingTag));
                         }
 
                     }
                     else if (taskValue == (int)Tiles.Store)
                     {
                         EntityInfo storeInfo = new EntityInfo { type = (int)Tiles.Store, specificEntity = entityIntent.specificEntity };
-                        ecb.SetComponent(index, entity, storeInfo);
+                        entityInfoSet.Enqueue(new EntityInfoData { entity = entity, entityData = storeInfo });
+                        //ecb.SetComponent(index, entity, storeInfo);
                         //Debug.Log("plant going to the store " + foundLocation.x + " " + foundLocation.y + " " + entityIntent.specificEntity.Index);
                     }
                     else if (taskValue == (int)Tiles.Till)
                     {
                         EntityInfo tillData = new EntityInfo { type = (int)Tiles.Till };
-                        ecb.SetComponent(index, entity, tillData);
+                        entityInfoSet.Enqueue(new EntityInfoData { entity = entity, entityData = tillData });
+                        //ecb.SetComponent(index, entity, tillData);
                     }
 
 
@@ -253,7 +327,7 @@ public class SearchSystem : JobComponentSystem
     {
         EntityManager entityManager = World.Active.EntityManager;
         GridData data = GridData.GetInstance();
-        int index = System.Math.Abs(rand.NextInt()) % randomValues.Length;
+        int index = UnityEngine.Mathf.Abs(rand.NextInt()) % randomValues.Length;
         var job = new SearchSystemJob();
         job.gridHashMap = data.gridStatus;
         job.randArray = randomValues;
@@ -264,12 +338,48 @@ public class SearchSystem : JobComponentSystem
         job.removals = hashRemovals.AsParallelWriter();
         job.IsPlantType = GetComponentDataFromEntity<PlantComponent>(true);
         job.plantGrowthMax = PlantSystem.MAX_GROWTH;
+        job.addTagSet = addTagData.AsParallelWriter();
+        job.removeTagSet = removeTagData.AsParallelWriter();
+        job.entityInfoSet = entityInfoData.AsParallelWriter();
+        job.movementSet = movementSetData.AsParallelWriter();
 
         var jobHandle = job.Schedule(this, inputDependencies);
         ecbs.AddJobHandleForProducer(jobHandle);
 
         // forced to sync here to remove all hash items at the same time
         jobHandle.Complete();
+
+        while (movementSetData.Count > 0)
+        {
+            MovementSetData moveData = movementSetData.Dequeue();
+            entityManager.SetComponentData(moveData.entity, moveData.movementData);
+        }
+
+        while (addTagData.Count > 0)
+        {
+            TagData tagData = addTagData.Dequeue();
+            if (tagData.type == (int)TagTypes.NeedsTaskTag)
+                entityManager.AddComponent(tagData.entity, typeof(NeedsTaskTag));
+            else if (tagData.type == (int)TagTypes.PerformTaskTag)
+                entityManager.AddComponent(tagData.entity, typeof(PerformTaskTag));
+            else
+                entityManager.AddComponent(tagData.entity, typeof(MovingTag));
+        }
+        while (removeTagData.Count > 0)
+        {
+            TagData tagData = removeTagData.Dequeue();
+            if (tagData.type == (int)TagTypes.NeedsTaskTag)
+                entityManager.RemoveComponent(tagData.entity, typeof(NeedsTaskTag));
+            else if (tagData.type == (int)TagTypes.PerformTaskTag)
+                entityManager.RemoveComponent(tagData.entity, typeof(PerformTaskTag));
+            else
+                entityManager.RemoveComponent(tagData.entity, typeof(MovingTag));
+        }
+        while (entityInfoData.Count > 0)
+        {
+            EntityInfoData infoData = entityInfoData.Dequeue();
+            entityManager.SetComponentData(infoData.entity, infoData.entityData);
+        }
 
         // this happens in the main thread
         // removal isn't in the parallel writer for the hash table

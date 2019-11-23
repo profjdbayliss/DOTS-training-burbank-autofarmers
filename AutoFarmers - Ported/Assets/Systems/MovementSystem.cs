@@ -11,11 +11,40 @@ public class Movement : JobComponentSystem
 {
     public float deltaTime;
     public EntityCommandBufferSystem ecbs;
+    private static NativeQueue<MovementSetData> movementSetData;
+    private static NativeQueue<TagData> addTagData;
+    private static NativeQueue<TagData> removeTagData;
 
     protected override void OnCreate()
     {
         ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
+        movementSetData = new NativeQueue<MovementSetData>(Allocator.Persistent);
+        addTagData = new NativeQueue<TagData>(Allocator.Persistent);
+        removeTagData = new NativeQueue<TagData>(Allocator.Persistent);
     }
+
+    protected override void OnDestroy()
+    {
+        if (movementSetData.IsCreated)
+        {
+            movementSetData.Dispose();
+        }
+
+        if (addTagData.IsCreated)
+        {
+            addTagData.Dispose();
+        }
+
+        if (removeTagData.IsCreated)
+        {
+            removeTagData.Dispose();
+        }
+
+        base.OnDestroy();
+
+    }
+    
+
 
     [RequireComponentTag(typeof(MovingTag))]
     [BurstCompile]
@@ -25,6 +54,9 @@ public class Movement : JobComponentSystem
         public EntityCommandBuffer.Concurrent ecb;
         public float deltaTime;
         public float2 rockPos;
+        public NativeQueue<MovementSetData>.ParallelWriter movementSet;
+        public NativeQueue<TagData>.ParallelWriter addTagSet;
+        public NativeQueue<TagData>.ParallelWriter removeTagSet;
 
         public void Execute(Entity entity, int index, ref Translation translation, [ReadOnly] ref Rotation rotation, ref MovementComponent actor, ref EntityInfo intent)
         {
@@ -95,43 +127,31 @@ public class Movement : JobComponentSystem
                     if ((int)actor.middlePos.x != -1 && (int)actor.middlePos.y != -1)
                     {
                         // we just hit the middle pos and so set things to go to target now
-                        var data = new MovementComponent { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, middlePos = new float2(-1, -1) };
-                        ecb.SetComponent(index, entity, data);
+                        var data = new MovementComponent { myType = actor.myType, startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, middlePos = new float2(-1, -1) };
+                        movementSet.Enqueue(new MovementSetData { entity = entity, movementData = data });
+                        // FIX: ecb throws errors for setting this component
+                        //ecb.SetComponent(index, entity, data);
                     }
-                    else if (intent.type == (int)Tiles.Rock)
+                    else if (intent.type == (int)Tiles.Rock || intent.type == (int)Tiles.Till ||
+                        intent.type == (int)Tiles.Plant || intent.type == (int)Tiles.Harvest ||
+                        intent.type == (int)Tiles.Store)
                     {
-                        //Debug.Log("performing rock1 now");
-                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
-                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                        addTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.PerformTaskTag });
+                        removeTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.MovingTag });
+                        // FIX: ecb on tags causes errors
+                        //ecb.AddComponent(index, entity, typeof(PerformTaskTag));
+                        //ecb.RemoveComponent(index, entity, typeof(MovingTag));
 
                     }
-                    else if (intent.type == (int)Tiles.Till)
-                    {
-                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
-                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
-                    }
-                    else if (intent.type == (int)Tiles.Plant)
-                    {
-                        //Debug.Log("Performing plant");
-                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
-                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
-                    }
-                    else if (intent.type == (int)Tiles.Harvest)
-                    {
-                        //Debug.Log("moving to harvest");
-                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
-                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
-                    }
-                    else if (intent.type == (int)Tiles.Store)
-                    {
-                        //Debug.Log("moving to store");
-                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
-                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
-                    }
+                    
+                   
                     else
                     {
-                        ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                        addTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.NeedsTaskTag });
+                        removeTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.MovingTag });
+                        // FIX: ecb causes errors for tags 
+                        //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                        //ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
 
                 }
@@ -176,44 +196,31 @@ public class Movement : JobComponentSystem
                     {
                         //Debug.Log("just got to the middle" + actor.middlePos);
                         // we just hit the middle pos and so set things to go to target now
-                        var data = new MovementComponent { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, middlePos = new float2(-1, -1) };
-                        ecb.SetComponent(index, entity, data);
+                        var data = new MovementComponent { myType = actor.myType, startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, middlePos = new float2(-1, -1) };
+                        movementSet.Enqueue(new MovementSetData { entity = entity, movementData = data });
+                        // FIX: ecb throws errors for setting this component
+                        //ecb.SetComponent(index, entity, data);
                     }
-                    else if (intent.type == (int)Tiles.Rock)
+                    else if (intent.type == (int)Tiles.Rock || intent.type == (int)Tiles.Till ||
+                       intent.type == (int)Tiles.Plant || intent.type == (int)Tiles.Harvest ||
+                       intent.type == (int)Tiles.Store)
                     {
-                        //Debug.Log("performing rock now");                        
-                        ecb.AddComponent<PerformTaskTag>(index, entity);
-                        ecb.RemoveComponent<MovingTag>(index, entity);
-                    }
-                    else if (intent.type == (int)Tiles.Till)
-                    {
-                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
-                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
-                    }
-                    else if (intent.type == (int)Tiles.Plant)
-                    {
-                        //Debug.Log("Performing plant");
-                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
-                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
-                    }
-                    else if (intent.type == (int)Tiles.Harvest)
-                    {
-                        //Debug.Log("moving to harvest2");
-                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
-                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
-                    }
-                    else if (intent.type == (int)Tiles.Store)
-                    {
-                        //Debug.Log("moving to store2");
-                        ecb.AddComponent(index, entity, typeof(PerformTaskTag));
-                        ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                        addTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.PerformTaskTag });
+                        removeTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.MovingTag });
+                        // FIX: ecb causes errors for tags
+                        //ecb.AddComponent(index, entity, typeof(PerformTaskTag));
+                        //ecb.RemoveComponent(index, entity, typeof(MovingTag));
+
                     }
                     else
                     {
-                        ecb.AddComponent<NeedsTaskTag>(index, entity);
-                        ecb.RemoveComponent<MovingTag>(index, entity);
+                        addTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.NeedsTaskTag });
+                        removeTagSet.Enqueue(new TagData { entity = entity, type = (int)TagTypes.MovingTag });
+                        // FIX: ecb causes errors for tags 
+                        //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                        //ecb.RemoveComponent(index, entity, typeof(MovingTag));
                     }
-
+   
                 }
 
 
@@ -240,11 +247,6 @@ public class Movement : JobComponentSystem
         }
     }
 
-
-
-
-
-
     protected override JobHandle OnUpdate(JobHandle inputDependencies)
     {
         var job = new MovementJob();
@@ -254,9 +256,33 @@ public class Movement : JobComponentSystem
         // For example,
         job.deltaTime = Time.deltaTime;
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
+        job.movementSet = movementSetData.AsParallelWriter();
+        job.addTagSet = addTagData.AsParallelWriter();
+        job.removeTagSet = removeTagData.AsParallelWriter();
+        JobHandle jobHandle = job.Schedule(this, inputDependencies);
+        jobHandle.Complete();
 
+        EntityManager entityManager = World.Active.EntityManager;
+        while (movementSetData.Count > 0)
+        {
+            MovementSetData data = movementSetData.Dequeue();
+            entityManager.SetComponentData(data.entity, data.movementData);
+        }
+        while (addTagData.Count > 0)
+        {
+            TagData data = addTagData.Dequeue();
+            if (data.type == (int)TagTypes.NeedsTaskTag)
+                entityManager.AddComponent(data.entity, typeof(NeedsTaskTag));
+            else if (data.type == (int)TagTypes.PerformTaskTag)
+                entityManager.AddComponent(data.entity, typeof(PerformTaskTag));
+        }
+        while (removeTagData.Count > 0)
+        {
+            TagData data = removeTagData.Dequeue();
+            entityManager.RemoveComponent(data.entity, typeof(MovingTag));
+        }
 
         // Now that the job is set up, schedule it to be run. 
-        return job.Schedule(this, inputDependencies);
+        return jobHandle;
     }
 }
