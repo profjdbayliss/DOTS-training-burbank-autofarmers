@@ -46,20 +46,18 @@ public class PlantSystem : JobComponentSystem
                     var data = new PlantComponent
                     {
                         timeGrown = currentTotalTime,
-                        state = (int)PlantState.Growing
-
+                        state = (int)PlantState.Growing,
                     };
-                    ecb.SetComponent(index, entity, data);
+                    plantComponent = data;
                 }
                 else
                 {
                     var data = new PlantComponent
                     {
                         timeGrown = maxGrowth,
-                        state = (int)PlantState.None
-
+                        state = (int)PlantState.None,   
                     };
-                    ecb.SetComponent(index, entity, data);
+                    plantComponent = data;
                 }
             } else if (plantComponent.state == (int)PlantState.Following)
             {
@@ -68,7 +66,13 @@ public class PlantSystem : JobComponentSystem
             }
             else if (plantComponent.state == (int)PlantState.Deleted)
             {
-                ecb.DestroyEntity(index, entity);
+                // since multiple entities can try to delete this one
+                // we need to make sure it exists first
+                if (translations.Exists(entity))
+                {
+                    //UnityEngine.Debug.Log("deleting a plant " + entity.Index);
+                    ecb.DestroyEntity(index, entity);
+                }
             }
         }
     }

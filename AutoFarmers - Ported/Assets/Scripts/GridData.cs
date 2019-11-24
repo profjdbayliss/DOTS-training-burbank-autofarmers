@@ -69,7 +69,7 @@ public class GridData
             gridStatus.Dispose();
         }
 
-        gridStatus = new NativeHashMap<int, EntityInfo>(capacity*capacity, Allocator.Persistent);
+        gridStatus = new NativeHashMap<int, EntityInfo>(capacity*capacity+1, Allocator.Persistent);
         this.width = capacity;
     }
 
@@ -344,6 +344,100 @@ public class GridData
                         if (value.type == statusToFind)
                         {
                             return new float2(i, j);
+                        }
+                    }
+                    else if (statusToFind == 0)
+                    {
+                        return new float2(i, j);
+                    }
+                }
+            }
+        }
+        return new float2(-1, -1);
+    }
+
+
+    // looks for a particular status id in a surrounding square radius
+    // from a position
+    // Doesn't look for the best position, looks for the first randomly
+    // starting either at the first part of the array of locations or
+    // from the end to the first
+    public static float2 FindMaturePlant(NativeHashMap<int, EntityInfo> hashMap, float2 currentPos, int radius, int statusToFind, int sizeX, int sizeZ,
+        ref ComponentDataFromEntity<PlantComponent> IsPlantType, float plantGrowthMax)
+    {
+        Unity.Mathematics.Random rand;
+        if ((uint)currentPos.x == 0)
+        {
+            rand = new Unity.Mathematics.Random(10);
+        }
+        else
+        {
+            rand = new Unity.Mathematics.Random((uint)currentPos.x);
+        }
+
+        int startX = (int)currentPos.x - radius;
+        int startY = (int)currentPos.y - radius;
+        if (startX < 0) startX = 0;
+        if (startY < 0) startY = 0;
+
+        int endX = (int)currentPos.x + radius + 1;
+        int endY = (int)currentPos.y + radius + 1;
+        if (endX >= sizeX)
+        {
+            endX = sizeX - 1;
+
+        }
+        if (endY >= sizeZ)
+        {
+            endY = sizeZ - 1;
+        }
+
+        EntityInfo value;
+        if ((Mathf.Abs(rand.NextInt()) % 100) > 50)
+        {
+            //Debug.Log("positive search position");
+            for (int i = startX; i <= endX; i++)
+            {
+                for (int j = startY; j <= endY; j++)
+                {
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (value.type == statusToFind)
+                        {
+                            // check to make sure plant is grown before harvesting
+                            // if it's not then find something else to do
+                            PlantComponent plantInfo = IsPlantType[value.specificEntity];
+                            if (plantInfo.timeGrown >= plantGrowthMax)
+                            {
+                                return new float2(i, j);
+                            }
+                        }
+                    }
+                    else if (statusToFind == 0)
+                    {
+                        return new float2(i, j);
+                    }
+                }
+            }
+        }
+        else
+        {
+            //Debug.Log("negative search direction");
+            for (int i = endX; i >= startX; i--)
+            {
+                for (int j = endY; j >= startY; j--)
+                {
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (value.type == statusToFind)
+                        {
+                            // check to make sure plant is grown before harvesting
+                            // if it's not then find something else to do
+                            PlantComponent plantInfo = IsPlantType[value.specificEntity];
+                            if (plantInfo.timeGrown >= plantGrowthMax)
+                            {
+                                return new float2(i, j);
+                            }
                         }
                     }
                     else if (statusToFind == 0)

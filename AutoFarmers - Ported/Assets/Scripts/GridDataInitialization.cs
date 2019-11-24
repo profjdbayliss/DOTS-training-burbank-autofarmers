@@ -28,6 +28,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public GameObject PlantMeshPrefab;
     public GameObject TilePrefab;
     public GameObject FarmerPrefab;
+    public GameObject DronePrefab;
     //public Material plantMaterial;
 
     // entity information for converted things
@@ -36,7 +37,10 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public static Entity farmerEntity;
     public static Entity tilledTileEntity;
     public static Entity plantEntity;
+    public static Entity droneEntity;
     public static int farmerCount;
+    public static int droneCount;
+    public static int MAX_DRONES;
 
     // board size    
     public static int MAX_MESH_WIDTH = 64;
@@ -77,6 +81,8 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     {
         // set up max farmers for everything else
         MaxFarmers = maxFarmers;
+        MAX_DRONES = 10;
+        droneCount = 0;
         farmerCount = 0;
         BoardWidth = boardWidth;
         PerformTaskSystem.InitializeTillSystem(maxFarmers);
@@ -101,6 +107,10 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         rockEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(RockPrefab, World.Active);
         entityManager.AddComponentData(rockEntity, new RockTag { });
 
+        // Generate drone prefab entity
+        droneEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(DronePrefab, World.Active);
+        entityManager.AddComponentData(droneEntity, new MovementComponent { });
+        entityManager.AddComponentData(droneEntity, new EntityInfo { type = -1 });
 
         // generate the first plant to use for everything
         plantMesh = GeneratePlantMesh(42);
@@ -111,15 +121,11 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         meshPlantTmp = Instantiate(plantMesh);
         meshPlantFilter.sharedMesh = meshPlantTmp;
         plantEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(PlantMeshPrefab, World.Active);
-        PlantComponent plantData = new PlantComponent
-        {
-           timeGrown = 0
-        };
         entityManager.AddComponent(plantEntity, typeof(PlantTag));
-        entityManager.SetComponentData(plantEntity, new Translation { Value = new float3(-1, -5, -1) });
-        entityManager.AddComponentData(plantEntity, plantData);
+        entityManager.SetComponentData(plantEntity, new Translation { Value = new float3(-1, -5, -1) });    
         entityManager.AddComponentData(plantEntity, new NonUniformScale { Value = new float3(1.0f, 2.0f, 1.0f) });
-        entityManager.SetComponentData(plantEntity, new PlantComponent { timeGrown = 0, state = (int)PlantState.None });
+        entityManager.AddComponentData(plantEntity, new PlantComponent { timeGrown = 0,
+            state = (int)PlantState.None });
 
         // create atlas and texture info
         CreateAtlasData();
@@ -277,7 +283,8 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
             // Place the instantiated entity in a grid with some noise
             var position = new float3(startX, 2, startZ);
             entityManager.SetComponentData(instance, new Translation() { Value = position });
-            var data = new MovementComponent { startPos = new float2(startX, startZ), speed = 2, targetPos = new float2(startX, startZ) };
+            var data = new MovementComponent { startPos = new float2(startX, startZ), speed = 2,
+                targetPos = new float2(startX, startZ), type = (int)MovementType.Farmer };
             //var intention = new IntentionComponent { intent = -1 };
             var entityData = new EntityInfo { type = -1 };
             entityManager.SetComponentData(instance, data);

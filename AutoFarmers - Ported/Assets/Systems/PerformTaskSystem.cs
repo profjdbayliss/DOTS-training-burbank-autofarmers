@@ -1,5 +1,7 @@
+using System.Threading;
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -12,12 +14,13 @@ public class PerformTaskSystem : JobComponentSystem
     private EntityCommandBufferSystem ecbs;
     private static NativeQueue<float2> tillChanges;
     private static Store storeInfo;
-    private static NativeQueue<int> plantsSold;
-
+    private static NativeArray<int> plantsSold;
+    private static Unity.Mathematics.Random rand;
     protected override void OnCreate()
     {
         ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
-        plantsSold = new NativeQueue<int>(Allocator.Persistent);
+        plantsSold = new NativeArray<int>(1, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+        rand = new Unity.Mathematics.Random(42);
     }
 
     public static void InitializeTillSystem(int maxFarmers)
@@ -61,7 +64,8 @@ public class PerformTaskSystem : JobComponentSystem
         public NativeQueue<float2>.ParallelWriter changes;
 
         // var used by store:
-        public NativeQueue<int>.ParallelWriter plantsSold;
+        public NativeArray<int> plantsSold;
+        [ReadOnly] public ComponentDataFromEntity<Translation> translations;
 
         public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref Rotation rotation, ref EntityInfo entityInfo)
         {
@@ -103,7 +107,9 @@ public class PerformTaskSystem : JobComponentSystem
                 if (grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
                 tillInfo))
                 {
+                    //UnityEngine.Debug.Log("harvesting : " + entityInfo.specificEntity.Index);
                     // plant needs to follow the farmer
+
                     PlantComponent plantInfo = new PlantComponent
                     {
                         timeGrown = PlantSystem.MAX_GROWTH,
@@ -119,20 +125,30 @@ public class PerformTaskSystem : JobComponentSystem
 
             else if (entityInfo.type == (int)Tiles.Store)
             {
-                // we need to remove the plant from the farmer
-                PlantComponent plantInfo = new PlantComponent
-                {
-                    timeGrown = PlantSystem.MAX_GROWTH,
-                    state = (int)PlantState.Deleted
-                };
 
-                ecb.SetComponent(entityInfo.specificEntity.Index,
-                     entityInfo.specificEntity, plantInfo);
+                // since multiple entities can try to delete this one
+                // we need to make sure it exists first
+                if (translations.Exists(entityInfo.specificEntity))
+                {
+                    // we need to remove the plant from the farmer
+                    PlantComponent plantInfo = new PlantComponent
+                    {
+                        timeGrown = PlantSystem.MAX_GROWTH,
+                        state = (int)PlantState.Deleted
+                    };
+                    ecb.SetComponent(entityInfo.specificEntity.Index,
+                         entityInfo.specificEntity, plantInfo);
+                }
                 ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
                 ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
 
                 // and should actually sell stuff here
-                plantsSold.Enqueue(1);
+                unsafe
+                {
+                    Interlocked.Increment(ref ((int*)plantsSold.GetUnsafePtr())[0]);
+                }
+
+                
             }
 
         }
@@ -147,7 +163,8 @@ public class PerformTaskSystem : JobComponentSystem
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.changes = tillChanges.AsParallelWriter();
         job.grid = data.gridStatus.AsParallelWriter();
-        job.plantsSold = plantsSold.AsParallelWriter();
+        job.plantsSold = plantsSold;
+        job.translations = GetComponentDataFromEntity<Translation>(true);
         JobHandle jobHandle = job.Schedule(this, inputDependencies);
 
         jobHandle.Complete();
@@ -186,14 +203,15 @@ public class PerformTaskSystem : JobComponentSystem
         }
 
         // fairly rare occurrence
-        if (plantsSold.Count > 0)
+        if (plantsSold[0] > 0)
         {
             EntityManager entityManager = World.Active.EntityManager;
-            storeInfo.moneyForFarmers += plantsSold.Count;
-            storeInfo.moneyForDrones += plantsSold.Count;
-            if (storeInfo.moneyForFarmers >= 10 && GridDataInitialization.farmerCount < GridDataInitialization.MaxFarmers)
+            storeInfo.moneyForFarmers += plantsSold[0];
+            storeInfo.moneyForDrones += plantsSold[0];
+            if (storeInfo.moneyForFarmers >= 10 && 
+                GridDataInitialization.farmerCount < GridDataInitialization.MaxFarmers)
             {
-                Unity.Mathematics.Random rand = new Unity.Mathematics.Random(42);
+                
                 // spawn a new farmer - never more than 1 a frame
                 storeInfo.moneyForFarmers -= 10;
                 var instance = entityManager.Instantiate(GridDataInitialization.farmerEntity);
@@ -204,7 +222,8 @@ public class PerformTaskSystem : JobComponentSystem
                 // Place the instantiated entity in a grid with some noise
                 var position = new float3(startX, 2, startZ);
                 entityManager.SetComponentData(instance, new Translation() { Value = position });
-                var farmerData = new MovementComponent { startPos = new float2(startX, startZ), speed = 2, targetPos = new float2(startX, startZ) };
+                var farmerData = new MovementComponent { startPos = new float2(startX, startZ), speed = 2,
+                    targetPos = new float2(startX, startZ), type =(int) MovementType.Farmer };
                 var entityData = new EntityInfo { type = -1 };
                 entityManager.SetComponentData(instance, farmerData);
                 entityManager.AddComponentData(instance, entityData);
@@ -212,12 +231,28 @@ public class PerformTaskSystem : JobComponentSystem
                 entityManager.AddComponent<NeedsTaskTag>(instance);
             }
 
-            if (storeInfo.moneyForDrones >= 50)
+            if (storeInfo.moneyForDrones >= 10 &&
+                GridDataInitialization.droneCount < GridDataInitialization.MAX_DRONES)
             {
                 // spawn a new drone
-                storeInfo.moneyForDrones -= 50;
+                storeInfo.moneyForDrones -= 10;
+                var instance = entityManager.Instantiate(GridDataInitialization.droneEntity);
+                GridDataInitialization.droneCount++;
+                int startX = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
+                int startZ = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
+
+                // Place the instantiated entity in a grid with some noise
+                var position = new float3(startX, 2, startZ);
+                entityManager.SetComponentData(instance, new Translation() { Value = position });
+                var droneData = new MovementComponent { startPos = new float2(startX, startZ), speed = 2,
+                    targetPos = new float2(startX, startZ), type = (int)MovementType.Drone };
+                var entityData = new EntityInfo { type = -1 };
+                entityManager.SetComponentData(instance, droneData);
+                entityManager.SetComponentData(instance, entityData);
+                // give his first command 
+                entityManager.AddComponent<NeedsTaskTag>(instance);
             }
-            plantsSold.Clear();
+            plantsSold[0] = 0;
         }
 
         return jobHandle;

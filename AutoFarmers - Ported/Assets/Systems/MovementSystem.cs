@@ -95,8 +95,9 @@ public class Movement : JobComponentSystem
                     if ((int)actor.middlePos.x != -1 && (int)actor.middlePos.y != -1)
                     {
                         // we just hit the middle pos and so set things to go to target now
-                        var data = new MovementComponent { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, middlePos = new float2(-1, -1) };
-                        ecb.SetComponent(index, entity, data);
+                        var data = new MovementComponent { startPos = actor.startPos, speed = actor.speed,
+                            targetPos = actor.targetPos, middlePos = new float2(-1, -1), type = actor.type };
+                        actor = data;
                     }
                     else if (intent.type == (int)Tiles.Rock)
                     {
@@ -176,8 +177,9 @@ public class Movement : JobComponentSystem
                     {
                         //Debug.Log("just got to the middle" + actor.middlePos);
                         // we just hit the middle pos and so set things to go to target now
-                        var data = new MovementComponent { startPos = actor.startPos, speed = actor.speed, targetPos = actor.targetPos, middlePos = new float2(-1, -1) };
-                        ecb.SetComponent(index, entity, data);
+                        var data = new MovementComponent { startPos = actor.startPos, speed = actor.speed,
+                            targetPos = actor.targetPos, middlePos = new float2(-1, -1), type = actor.type };
+                        actor = data;
                     }
                     else if (intent.type == (int)Tiles.Rock)
                     {

@@ -1,3 +1,4 @@
+using System.Threading;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -72,17 +73,32 @@ public class SearchSystem : JobComponentSystem
         [ReadOnly] public float plantGrowthMax;
         // var for tilling
         public NativeQueue<int>.ParallelWriter removals;
-
+        
         public void Execute(Entity entity, int index, [ReadOnly]ref Translation translation, ref MovementComponent movementComponent, ref EntityInfo entityIntent)
         {
-            // magic numbers remaining - till radius and the 3 in task value
-            int TILL_RADIUS = 5;
-            int taskValue = (randArray[(nextIndex + index) % randArray.Length] % 4) + 1;
-            if (entityIntent.type == (int)Tiles.Harvest)
+            int taskValue;
+            if (movementComponent.type == (int)MovementType.Farmer)
             {
-                // we just harvested and now need to get the plant
-                // to the store
-                taskValue = (int)Tiles.Store;
+                 taskValue = (randArray[(nextIndex + index) % randArray.Length] % 4) + 1;
+
+                if (entityIntent.type == (int)Tiles.Harvest)
+                {
+                    // we just harvested and now need to get the plant
+                    // to the store
+                    taskValue = (int)Tiles.Store;
+                }
+            } else
+            {
+                // this is a drone: they only harvest and sell
+                if (entityIntent.type == (int)Tiles.Harvest)
+                {
+                    // we just harvested and now need to get the plant
+                    // to the store
+                    taskValue = (int)Tiles.Store;
+                } else
+                {
+                    taskValue = (int)Tiles.Harvest;
+                }
             }
 
             float2 pos = new float2(translation.Value.x, translation.Value.z);
@@ -102,8 +118,9 @@ public class SearchSystem : JobComponentSystem
             else if (taskValue == (int)Tiles.Harvest)
             {
                 // searches for the plants to go harvest them 
-                foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, (int)Tiles.Plant, gridSize, gridSize);
-
+                foundLocation = 
+                    GridData.FindMaturePlant(gridHashMap, pos, radiusForSearch, (int)Tiles.Plant, gridSize, gridSize,
+                    ref IsPlantType, plantGrowthMax);
             }
             else if (taskValue == (int)Tiles.Store)
             {
@@ -112,9 +129,10 @@ public class SearchSystem : JobComponentSystem
                 // no store close by
                 if (foundLocation.x == -1)
                 {
-                    // need to find something to get rid of the plant
+                    // need to find somewhere to get rid of the plant
                     foundLocation = GridData.Search(gridHashMap, pos, gridSize, (int)Tiles.Store, gridSize, gridSize);
                 }
+
             }
             else // till only looks at things that don't exist in the grid - 0
             {
@@ -130,7 +148,7 @@ public class SearchSystem : JobComponentSystem
 
                 // we look for a default spot to put a tilled thing
                 float2 nextPos = new float2(Mathf.Abs(rand.NextInt()) % gridSize, Mathf.Abs(rand.NextInt()) % gridSize);
-                foundLocation = GridData.Search(gridHashMap, nextPos, TILL_RADIUS, 0, gridSize, gridSize);
+                foundLocation = GridData.Search(gridHashMap, nextPos, radiusForSearch, 0, gridSize, gridSize);
 
             }
 
@@ -154,16 +172,31 @@ public class SearchSystem : JobComponentSystem
                     //Debug.Log("Updated rock position to: " + rockPos + "Actor is now chasing a rock");
 
                     rockPos = new float2(rockPos.x + 0.5f, rockPos.y + 0.5f);
-                    var data = new MovementComponent { startPos = pos, speed = 2, targetPos = rockPos, middlePos = findMiddle };
-                    //var intention = new IntentionComponent { intent = (int)Tiles.Rock };
+                    var data = new MovementComponent { startPos = pos, speed = 2, targetPos = rockPos,
+                        middlePos = findMiddle, type = movementComponent.type };
+                    movementComponent = data;
+
+                    // if we are on the way to the store then destroy the plant and
+                    // mine the rock
+                    if (taskValue == (int)Tiles.Store)
+                    {
+                        // destroy the plant as there's a rock in the way or no place to take it
+
+                        //UnityEngine.Debug.Log("plant should be destroyed on farmer");
+                        PlantComponent plantInfo = new PlantComponent
+                        {
+                            timeGrown = PlantSystem.MAX_GROWTH,
+                            state = (int)PlantState.Deleted,
+                        };
+                        ecb.SetComponent(entityIntent.specificEntity.Index, entityIntent.specificEntity, plantInfo);
+                    }
+
                     // get the index into the array of rocks so that we can find it
                     // to destroy it
                     EntityInfo fullRockData = GridData.getFullHashValue(gridHashMap, (int)rockPos.x, (int)rockPos.y);
-                    ecb.SetComponent(index, entity, fullRockData);
+                    entityIntent = fullRockData;
+                    //ecb.SetComponent(index, entity, fullRockData);
                     //Debug.Log("rock task happening : " + rockEntityIndex + " " + tmp.Index);
-
-                    movementComponent = data;
-                    //entityIntent = intention;
                     ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
                     ecb.AddComponent(index, entity, typeof(MovingTag));
                     int key = GridData.ConvertToHash((int)rockPos.x, (int)rockPos.y);
@@ -171,13 +204,10 @@ public class SearchSystem : JobComponentSystem
                 }
                 else
                 {
-
                     foundLocation = new float2(foundLocation.x + 0.5f, foundLocation.y + 0.5f);
-
-                    var data = new MovementComponent { startPos = pos, speed = 2, targetPos = foundLocation, middlePos = findMiddle };
-                    ecb.SetComponent(index, entity, data);
-                    //var intention = new IntentionComponent { intent = taskValue };
-                    //ecb.SetComponent(index, entity, intention);
+                    var data = new MovementComponent { startPos = pos, speed = 2, targetPos = foundLocation,
+                        middlePos = findMiddle, type = movementComponent.type };
+                    movementComponent = data;
 
                     //Debug.Log("doing a task and about to move: " + pos.x + " " + pos.y +
                     //    " target is : " + data.targetPos.x + " " + data.targetPos.y);
@@ -192,17 +222,16 @@ public class SearchSystem : JobComponentSystem
                         // to destroy it
                         EntityInfo fullRockData = GridData.getFullHashValue(gridHashMap, (int)rockPos.x, (int)rockPos.y);
                         //Debug.Log("rock task happening : " + rockEntityIndex + " " + tmp.Index);
-                        ecb.SetComponent(index, entity, fullRockData);
+                        entityIntent = fullRockData;
                         // remove the rock from the hash so that nobody else tries to get it
                         removals.Enqueue(key);
                     }
                     else if (taskValue == (int)Tiles.Plant)
                     {
-
                         int key = GridData.ConvertToHash((int)foundLocation.x, (int)foundLocation.y);
                         removals.Enqueue(key);
                         EntityInfo plantData = new EntityInfo { type = (int)Tiles.Plant };
-                        ecb.SetComponent(index, entity, plantData);
+                        entityIntent = plantData;
                     }
                     else if (taskValue == (int)Tiles.Harvest)
                     {
@@ -213,11 +242,12 @@ public class SearchSystem : JobComponentSystem
                         // if it's not then find something else to do
                         PlantComponent plantInfo = IsPlantType[fullData.specificEntity];
                         if (plantInfo.timeGrown >= plantGrowthMax)
-                        {
+                        {                            
                             removals.Enqueue(key);
                             EntityInfo harvestData = new EntityInfo { type = (int)Tiles.Harvest, specificEntity = fullData.specificEntity };
-                            ecb.SetComponent(index, entity, harvestData);
-                            //Debug.Log("plant ready to harvest at : " + foundLocation.x + " " + foundLocation.y);
+                            entityIntent = harvestData;
+                            //Debug.Log("plant ready to harvest at : " + fullData.specificEntity.Index + " " + index + " " +
+                            //    foundLocation.x + " " + foundLocation.y);
                         }
                         else
                         {
@@ -229,14 +259,15 @@ public class SearchSystem : JobComponentSystem
                     }
                     else if (taskValue == (int)Tiles.Store)
                     {
-                        EntityInfo storeInfo = new EntityInfo { type = (int)Tiles.Store, specificEntity = entityIntent.specificEntity };
-                        ecb.SetComponent(index, entity, storeInfo);
+                        EntityInfo storeInfo = new EntityInfo { type = (int)Tiles.Store,
+                            specificEntity = entityIntent.specificEntity };
+                        entityIntent = storeInfo;
                         //Debug.Log("plant going to the store " + foundLocation.x + " " + foundLocation.y + " " + entityIntent.specificEntity.Index);
                     }
                     else if (taskValue == (int)Tiles.Till)
                     {
                         EntityInfo tillData = new EntityInfo { type = (int)Tiles.Till };
-                        ecb.SetComponent(index, entity, tillData);
+                        entityIntent = tillData;
                     }
 
 
@@ -299,7 +330,8 @@ public class SearchSystem : JobComponentSystem
                         Rotation rotation = entityManager.GetComponentData<Rotation>(instance);
                         var newRot = rotation.Value * Quaternion.Euler(0, 0, 90);
                         entityManager.SetComponentData(instance, new Rotation { Value = newRot });
-                        entityManager.SetComponentData(instance, new PlantComponent { timeGrown = 0, state = (int)PlantState.Growing });
+                        entityManager.SetComponentData(instance, new PlantComponent { timeGrown = 0, state = (int)PlantState.Growing,
+                        });
                         //Debug.Log("added grid plant " + instance.Index);
                     }
                 }
