@@ -57,9 +57,6 @@ public class PerformTaskSystem : JobComponentSystem
         public EntityCommandBuffer.Concurrent ecb;
         public NativeHashMap<int, EntityInfo>.ParallelWriter grid;
 
-        // var specific to rock tasks:
-        [ReadOnly] public ComponentDataFromEntity<RockTag> IsRockType;
-
         // var's used by till task:
         public NativeQueue<float2>.ParallelWriter changes;
 
@@ -159,7 +156,7 @@ public class PerformTaskSystem : JobComponentSystem
         GridData data = GridData.GetInstance();
 
         var job = new PerformTaskSystemJob();
-        job.IsRockType = GetComponentDataFromEntity<RockTag>(true);
+        //job.IsRockType = GetComponentDataFromEntity<RockTag>(true);
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.changes = tillChanges.AsParallelWriter();
         job.grid = data.gridStatus.AsParallelWriter();
@@ -169,6 +166,7 @@ public class PerformTaskSystem : JobComponentSystem
 
         jobHandle.Complete();
 
+        // FIX: this could be a parallel for on the main thread: ComponentSystem type thing
         // we have to have a sync point here since we're about to change all uv's for the frame
         // This happens on main thread since uv's are Vector2 types and can't be changed inside of the job
         while (tillChanges.Count > 0)
@@ -202,7 +200,8 @@ public class PerformTaskSystem : JobComponentSystem
             }
         }
 
-        // fairly rare occurrence
+        // max this gets run is once a frame and
+        // many times it doesn't get run at all
         if (plantsSold[0] > 0)
         {
             EntityManager entityManager = World.Active.EntityManager;
@@ -219,7 +218,7 @@ public class PerformTaskSystem : JobComponentSystem
                 int startX = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
                 int startZ = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
 
-                // Place the instantiated entity in a grid with some noise
+                // Place the instantiated entity in a random position on the grid
                 var position = new float3(startX, 2, startZ);
                 entityManager.SetComponentData(instance, new Translation() { Value = position });
                 var farmerData = new MovementComponent { startPos = new float2(startX, startZ), speed = 2,
@@ -231,17 +230,17 @@ public class PerformTaskSystem : JobComponentSystem
                 entityManager.AddComponent<NeedsTaskTag>(instance);
             }
 
-            if (storeInfo.moneyForDrones >= 10 &&
-                GridDataInitialization.droneCount < GridDataInitialization.MAX_DRONES)
+            if (storeInfo.moneyForDrones >= 50 &&
+                GridDataInitialization.droneCount < GridDataInitialization.MaxDrones)
             {
                 // spawn a new drone
-                storeInfo.moneyForDrones -= 10;
+                storeInfo.moneyForDrones -= 50;
                 var instance = entityManager.Instantiate(GridDataInitialization.droneEntity);
                 GridDataInitialization.droneCount++;
                 int startX = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
                 int startZ = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
 
-                // Place the instantiated entity in a grid with some noise
+                // Place the instantiated entity in a random position on the grid
                 var position = new float3(startX, 2, startZ);
                 entityManager.SetComponentData(instance, new Translation() { Value = position });
                 var droneData = new MovementComponent { startPos = new float2(startX, startZ), speed = 2,

@@ -241,6 +241,7 @@ public class SearchSystem : JobComponentSystem
                         // check to make sure plant is grown before harvesting
                         // if it's not then find something else to do
                         PlantComponent plantInfo = IsPlantType[fullData.specificEntity];
+                        
                         if (plantInfo.timeGrown >= plantGrowthMax)
                         {                            
                             removals.Enqueue(key);
@@ -312,6 +313,7 @@ public class SearchSystem : JobComponentSystem
             EntityInfo value;
             if (data.gridStatus.TryGetValue(key, out value))
             {
+                // FIX: this could potentially be in a parallel for loop
                 if (value.type == (int)Tiles.Till)
                 {
                     float plantingHeight = 1.0f;

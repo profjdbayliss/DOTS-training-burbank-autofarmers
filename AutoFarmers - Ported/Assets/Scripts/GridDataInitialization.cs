@@ -20,6 +20,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public int storeCount;
     public int maxFarmers;
     public int farmerNumber;
+    public int maxDrones;
 
     [Header("Grid Objects")]
     //public GameObject GridGeneratorPrefab;
@@ -40,7 +41,6 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public static Entity droneEntity;
     public static int farmerCount;
     public static int droneCount;
-    public static int MAX_DRONES;
 
     // board size    
     public static int MAX_MESH_WIDTH = 64;
@@ -56,6 +56,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public static string[] names;
     public static TextureUV[] textures;
     public static int MaxFarmers;
+    public static int MaxDrones;
     public static int BoardWidth;
     public static Mesh plantMesh;
 
@@ -81,7 +82,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     {
         // set up max farmers for everything else
         MaxFarmers = maxFarmers;
-        MAX_DRONES = 10;
+        MaxDrones = maxDrones;
         droneCount = 0;
         farmerCount = 0;
         BoardWidth = boardWidth;
@@ -127,6 +128,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         entityManager.AddComponentData(plantEntity, new PlantComponent { timeGrown = 0,
             state = (int)PlantState.None });
 
+        // FIX: this should just be saved and then loaded when it's done
         // create atlas and texture info
         CreateAtlasData();
         CreateTextures();
@@ -140,7 +142,6 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         GridData gdata = GridData.GetInstance();
         gdata.Initialize(BoardWidth);
 
-
         // generate the terrain mesh and add it to the world
         Mesh mesh2;
         int maxX = BoardWidth / MAX_MESH_WIDTH;
@@ -148,6 +149,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         // only one mesh
         allMeshes = new Mesh[(maxX + 1) * (maxZ + 1)];
 
+        // for small enough meshes it's just a single mesh in the world
         int height = 0;
         if (maxX == 0 && maxZ == 0)
         {
@@ -186,6 +188,9 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         }
         else
         {
+            // FIX: this could be parallelized
+            // for larger meshes it's broken up into
+            // 64k vertex pieces
             for (int x = 0; x < maxX+1; x++)
             {
                 for (int z = 0; z < maxZ+1; z++)
@@ -271,7 +276,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         // Create farmer entity prefab from the game object hierarchy once
         farmerEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(FarmerPrefab, World.Active);
 
-        // Efficiently instantiate a bunch of entities from the already converted entity prefab
+        // FIX: this could be parallelized
         Unity.Mathematics.Random rand = new Unity.Mathematics.Random(42);
         for (int i = 0; i < farmerNumber; i++)
         {
@@ -570,12 +575,16 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
             }
         }
 
+        // FIX: This could maybe be parallelized?
         for (int i = 0; i < rockSpawnAttempts; i++)
         {
             TrySpawnRock();
         }
     }
 
+    // rock spawner from the original sim
+    // except currently spawns cubes rather
+    // than rectangles
     void TrySpawnRock()
     {
         
@@ -603,8 +612,6 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         }
         if (blocked == false)
         {
-            //Rock rock = new Rock(rect);
-            //rocks.Add(rock);
             //TODO: Combine rocks into groups
 
             for (int x = rockX; x <= rockX + width; x++)
@@ -623,6 +630,9 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         }
     }
 
+    // This algorithm is from the original
+    // sim and is done once to represent all plants
+    // in the game
     Mesh GeneratePlantMesh(int seed)
     {
         UnityEngine.Random.State oldRandState = UnityEngine.Random.state;
@@ -698,10 +708,6 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         outputMesh.SetTriangles(triangles, 0);
         outputMesh.RecalculateNormals();
 
-        // TO FIX: need to register index somewhere - maybe with the hash table?
-        //meshLookup.Add(seed, outputMesh);
-
-        //Farm.RegisterSeed(seed);
         UnityEngine.Random.state = oldRandState;
         return outputMesh;
     }

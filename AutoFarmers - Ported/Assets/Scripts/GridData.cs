@@ -28,25 +28,6 @@ public class GridData
             return data;
         }
         
-
-        //gridStatus.TryAdd(ConvertToHash(5, 4), ConvertDataValue(2, 1));
-        //gridStatus.TryAdd(ConvertToHash(8, 5), ConvertDataValue(2, 2));
-        //gridStatus.TryAdd(ConvertToHash(7, 4), ConvertDataValue(1, 3));
-        //gridStatus.TryAdd(ConvertToHash(5, 15), ConvertDataValue(1, 3));
-        //gridStatus.TryAdd(ConvertToHash(8, 15), ConvertDataValue(3, 3));
-
-        // test find the rock
-        //float2 value = FindTheRock(gridStatus, new float2(5, 4), new float2(8, 4), new float2(8, 5), sX, sZ);
-        //Debug.Log("the rock test: " + value.x + " " + value.y);
-
-
-
-        //gridStatus.TryAdd(ConvertToHash(4, 4), ConvertDataValue(4, 2));
-        //int temp = 0;
-        //gridStatus.TryGetValue(ConvertToHash(7, 7), out temp);
-        //float2 tmp = GridData.Search(new float2(7, 7), 5, 3);
-        //Debug.Log("count that exists: " + tmp.x + " " + tmp.y);
-        
     }
 
 
@@ -62,15 +43,16 @@ public class GridData
     // the board width is the capacity and needs to be multiplied by itself
     // to get the true every space capacity because capacity
     // is assumed just to be the width of the board
-    public void Initialize(int capacity)
+    public void Initialize(int boardWidth)
     {
         if(gridStatus.IsCreated)
         {
             gridStatus.Dispose();
         }
 
-        gridStatus = new NativeHashMap<int, EntityInfo>(capacity*capacity+1, Allocator.Persistent);
-        this.width = capacity;
+        // we pass 
+        gridStatus = new NativeHashMap<int, EntityInfo>(boardWidth*boardWidth+1, Allocator.Persistent);
+        this.width = boardWidth;
     }
 
     // creates a key from the row/col of a tile location
@@ -187,8 +169,6 @@ public class GridData
             }
  
         }
-
-        //Debug.Log("part way through the method");
 
         // no rocks on path to middle, so try path from middle to end
         startX = (int)middlePos.x;
@@ -357,7 +337,7 @@ public class GridData
     }
 
 
-    // looks for a particular status id in a surrounding square radius
+    // looks for a particular plant in a surrounding square radius
     // from a position
     // Doesn't look for the best position, looks for the first randomly
     // starting either at the first part of the array of locations or
