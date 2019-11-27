@@ -9,7 +9,6 @@ public struct MovementComponent : IComponentData
     public float2 startPos;
     public float2 middlePos;
     public float speed;
-    public int type;
 }
 
 public enum MovementType { Farmer = 0, Drone = 1};

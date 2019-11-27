@@ -66,87 +66,85 @@ public class PerformTaskSystem : JobComponentSystem
 
         public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref Rotation rotation, ref EntityInfo entityInfo)
         {
+            Tiles state = (Tiles)entityInfo.type;
 
-            if (entityInfo.type == (int)Tiles.Rock)
+            switch (state)
             {
-                //Debug.Log("destroying rock");
-                ecb.DestroyEntity(entityInfo.specificEntity.Index, entityInfo.specificEntity);
-                ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
-                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-            }
-            else if (entityInfo.type == (int)Tiles.Till)
-            {
-                float tillBlockHeight = 0.25f;
-                EntityInfo tillInfo = new EntityInfo { type = (int)Tiles.Till };
-                if (
-                grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
-                tillInfo))
-                {
-                    float3 pos = new float3((int)translation.Value.x, tillBlockHeight, (int)translation.Value.z);
-
-                    changes.Enqueue(new float2((int)pos.x, (int)pos.z));
-                }
-
-                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
-            }
-            else if (entityInfo.type == (int)Tiles.Plant)
-            {
-                // since the plant needs to be instantiated and then cached
-                // into the hash table it's done in the main thread
-                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
-            }
-            else if (entityInfo.type == (int)Tiles.Harvest)
-            {
-                EntityInfo tillInfo = new EntityInfo { type = (int)Tiles.Till };
-
-                if (grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
-                tillInfo))
-                {
-                    //UnityEngine.Debug.Log("harvesting : " + entityInfo.specificEntity.Index);
-                    // plant needs to follow the farmer
-
-                    PlantComponent plantInfo = new PlantComponent
+                case Tiles.Rock:
+                    //Debug.Log("destroying rock");
+                    ecb.DestroyEntity(entityInfo.specificEntity.Index, entityInfo.specificEntity);
+                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                    break;
+                case Tiles.Till:
+                    float tillBlockHeight = 0.25f;
+                    EntityInfo tillInfo = new EntityInfo { type = (int)Tiles.Till };
+                    if (
+                    grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
+                    tillInfo))
                     {
-                        timeGrown = PlantSystem.MAX_GROWTH,
-                        state = (int)PlantState.Following,
-                        farmerToFollow = entity
-                    };
-                    ecb.SetComponent(entityInfo.specificEntity.Index,
-                         entityInfo.specificEntity, plantInfo);
-                }
-                ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
-                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-            }
+                        float3 pos = new float3((int)translation.Value.x, tillBlockHeight, (int)translation.Value.z);
 
-            else if (entityInfo.type == (int)Tiles.Store)
-            {
+                        changes.Enqueue(new float2((int)pos.x, (int)pos.z));
+                    }
 
-                // since multiple entities can try to delete this one
-                // we need to make sure it exists first
-                if (translations.Exists(entityInfo.specificEntity))
-                {
-                    // we need to remove the plant from the farmer
-                    PlantComponent plantInfo = new PlantComponent
+                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    break;
+                case Tiles.Plant:
+                    // since the plant needs to be instantiated and then cached
+                    // into the hash table it's done in the main thread
+                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    break;
+                case Tiles.Harvest:
+                    EntityInfo harvestInfo = new EntityInfo { type = (int)Tiles.Till };
+
+                    if (grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
+                    harvestInfo))
                     {
-                        timeGrown = PlantSystem.MAX_GROWTH,
-                        state = (int)PlantState.Deleted
-                    };
-                    ecb.SetComponent(entityInfo.specificEntity.Index,
-                         entityInfo.specificEntity, plantInfo);
-                }
-                ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
-                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                        //UnityEngine.Debug.Log("harvesting : " + entityInfo.specificEntity.Index);
+                        // plant needs to follow the farmer
 
-                // and should actually sell stuff here
-                unsafe
-                {
-                    Interlocked.Increment(ref ((int*)plantsSold.GetUnsafePtr())[0]);
-                }
+                        PlantComponent plantInfo = new PlantComponent
+                        {
+                            timeGrown = PlantSystem.MAX_GROWTH,
+                            state = (int)PlantState.Following,
+                            farmerToFollow = entity
+                        };
+                        ecb.SetComponent(entityInfo.specificEntity.Index,
+                             entityInfo.specificEntity, plantInfo);
+                    }
+                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                    break;
+                case Tiles.Store:
+                    // since multiple entities can try to delete this one
+                    // we need to make sure it exists first
+                    if (translations.Exists(entityInfo.specificEntity))
+                    {
+                        // we need to remove the plant from the farmer
+                        PlantComponent plantInfo = new PlantComponent
+                        {
+                            timeGrown = PlantSystem.MAX_GROWTH,
+                            state = (int)PlantState.Deleted
+                        };
+                        ecb.SetComponent(entityInfo.specificEntity.Index,
+                             entityInfo.specificEntity, plantInfo);
+                    }
+                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
 
-                
+                    // and should actually sell stuff here
+                    unsafe
+                    {
+                        Interlocked.Increment(ref ((int*)plantsSold.GetUnsafePtr())[0]);
+                    }
+                    break;
+                default:
+                    break;
             }
+           
 
         }
     }
@@ -222,12 +220,13 @@ public class PerformTaskSystem : JobComponentSystem
                 var position = new float3(startX, 2, startZ);
                 entityManager.SetComponentData(instance, new Translation() { Value = position });
                 var farmerData = new MovementComponent { startPos = new float2(startX, startZ), speed = 2,
-                    targetPos = new float2(startX, startZ), type =(int) MovementType.Farmer };
+                    targetPos = new float2(startX, startZ) };
                 var entityData = new EntityInfo { type = -1 };
                 entityManager.SetComponentData(instance, farmerData);
                 entityManager.AddComponentData(instance, entityData);
                 // give his first command 
                 entityManager.AddComponent<NeedsTaskTag>(instance);
+
             }
 
             if (storeInfo.moneyForDrones >= 50 &&
@@ -244,7 +243,7 @@ public class PerformTaskSystem : JobComponentSystem
                 var position = new float3(startX, 2, startZ);
                 entityManager.SetComponentData(instance, new Translation() { Value = position });
                 var droneData = new MovementComponent { startPos = new float2(startX, startZ), speed = 2,
-                    targetPos = new float2(startX, startZ), type = (int)MovementType.Drone };
+                    targetPos = new float2(startX, startZ),  };
                 var entityData = new EntityInfo { type = -1 };
                 entityManager.SetComponentData(instance, droneData);
                 entityManager.SetComponentData(instance, entityData);

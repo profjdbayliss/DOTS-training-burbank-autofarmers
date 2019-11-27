@@ -46,3 +46,15 @@ public struct PlantTag : IComponentData
 {
 
 }
+
+[Serializable]
+public struct DroneTag : IComponentData
+{
+
+}
+
+[Serializable]
+public struct FarmerTag : IComponentData
+{
+
+}

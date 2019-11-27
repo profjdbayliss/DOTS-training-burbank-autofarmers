@@ -31,49 +31,55 @@ public class PlantSystem : JobComponentSystem
             ref PlantComponent plantComponent,
             ref NonUniformScale scale)
         {
-            if (plantComponent.state == (int)PlantState.None)
-            {
-                return;
-            }
-            else if (plantComponent.state == (int)PlantState.Growing)
-            {
-                float currentTotalTime = deltaTime + plantComponent.timeGrown;
+            PlantState state = (PlantState)plantComponent.state;
 
-                if (currentTotalTime < maxGrowth)
-                {
-                    float currentScale = currentTotalTime / 10.0f;
-                    ecb.SetComponent(index, entity, new NonUniformScale { Value = new float3(currentScale, 1.0f, currentScale) });
-                    var data = new PlantComponent
-                    {
-                        timeGrown = currentTotalTime,
-                        state = (int)PlantState.Growing,
-                    };
-                    plantComponent = data;
-                }
-                else
-                {
-                    var data = new PlantComponent
-                    {
-                        timeGrown = maxGrowth,
-                        state = (int)PlantState.None,   
-                    };
-                    plantComponent = data;
-                }
-            } else if (plantComponent.state == (int)PlantState.Following)
+            switch(state)
             {
-                float3 pos = translations[plantComponent.farmerToFollow].Value;
-                ecb.SetComponent(index, entity, new Translation { Value = new float3(pos.x, pos.y+2, pos.z) });              
+                case PlantState.None:
+                    
+                    break;
+                case PlantState.Growing:
+                    float currentTotalTime = deltaTime + plantComponent.timeGrown;
+
+                    if (currentTotalTime < maxGrowth)
+                    {
+                        float currentScale = currentTotalTime / 10.0f;
+                        ecb.SetComponent(index, entity, new NonUniformScale { Value = new float3(currentScale, 1.0f, currentScale) });
+                        var data = new PlantComponent
+                        {
+                            timeGrown = currentTotalTime,
+                            state = (int)PlantState.Growing,
+                        };
+                        plantComponent = data;
+                    }
+                    else
+                    {
+                        var data = new PlantComponent
+                        {
+                            timeGrown = maxGrowth,
+                            state = (int)PlantState.None,
+                        };
+                        plantComponent = data;
+                    }
+                    break;
+                case PlantState.Following:
+                    float3 pos = translations[plantComponent.farmerToFollow].Value;
+                    ecb.SetComponent(index, entity, new Translation { Value = new float3(pos.x, pos.y + 2, pos.z) });
+
+                    break;
+                case PlantState.Deleted:
+                    // since multiple entities can try to delete this one
+                    // we need to make sure it exists first
+                    if (translations.Exists(entity))
+                    {
+                        //UnityEngine.Debug.Log("deleting a plant " + entity.Index);
+                        ecb.DestroyEntity(index, entity);
+                    }
+                    break;
+                default:
+                    break;
             }
-            else if (plantComponent.state == (int)PlantState.Deleted)
-            {
-                // since multiple entities can try to delete this one
-                // we need to make sure it exists first
-                if (translations.Exists(entity))
-                {
-                    //UnityEngine.Debug.Log("deleting a plant " + entity.Index);
-                    ecb.DestroyEntity(index, entity);
-                }
-            }
+            
         }
     }
     

@@ -23,14 +23,12 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public int maxDrones;
 
     [Header("Grid Objects")]
-    //public GameObject GridGeneratorPrefab;
     public GameObject RockPrefab;
     public GameObject StorePrefab;
     public GameObject PlantMeshPrefab;
     public GameObject TilePrefab;
     public GameObject FarmerPrefab;
     public GameObject DronePrefab;
-    //public Material plantMaterial;
 
     // entity information for converted things
     EntityManager entityManager;
@@ -39,21 +37,23 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     public static Entity tilledTileEntity;
     public static Entity plantEntity;
     public static Entity droneEntity;
+
+    // counts for maximum numbers of entities
     public static int farmerCount;
     public static int droneCount;
 
-    // board size    
+    // board size - can be reset by editor   
     public static int MAX_MESH_WIDTH = 64;
 
     // texture atlas variables:
-    public static readonly int pixelWidth = 16;
-    public static readonly int pixelHeight = 16;
-    public static int atlasHeight = 0;
-    public static int atlasWidth = 0;
-    public static Texture2D atlas;
+    //public static readonly int pixelWidth = 16;
+    //public static readonly int pixelHeight = 16;
+    //public static int atlasHeight = 0;
+    //public static int atlasWidth = 0;
+    //public static Texture2D atlas;
     public static int TEXTURE_NUMBER = 2;
     public enum BoardTypes : int { Board = 0, TilledDirt = 1 };
-    public static string[] names;
+    //public static string[] names;
     public static TextureUV[] textures;
     public static int MaxFarmers;
     public static int MaxDrones;
@@ -80,14 +80,14 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
-        // set up max farmers for everything else
+        // set up initial counts and values for everything
         MaxFarmers = maxFarmers;
         MaxDrones = maxDrones;
         droneCount = 0;
         farmerCount = 0;
         BoardWidth = boardWidth;
         PerformTaskSystem.InitializeTillSystem(maxFarmers);
-        SearchSystem.InitializeSearchSystem(maxFarmers);
+        TaskSystem.InitializeSearchSystem(maxFarmers);
 
         // set up mesh rendering from prefab
         MeshRenderer meshRenderer = TilePrefab.GetComponent<MeshRenderer>();
@@ -104,7 +104,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         boardArchetype = entityManager.CreateArchetype(
             typeof(Translation), typeof(GridBoard));
 
-        // Generate tile Entities
+        // Generate rock prefab entity
         rockEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(RockPrefab, World.Active);
         entityManager.AddComponentData(rockEntity, new RockTag { });
 
@@ -112,13 +112,13 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         droneEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(DronePrefab, World.Active);
         entityManager.AddComponentData(droneEntity, new MovementComponent { });
         entityManager.AddComponentData(droneEntity, new EntityInfo { type = -1 });
+        entityManager.AddComponent(droneEntity, typeof(DroneTag));
 
-        // generate the first plant to use for everything
+        // generate the first plant to use for everything else
         plantMesh = GeneratePlantMesh(42);
         MeshRenderer meshPlantRenderer = PlantMeshPrefab.GetComponent<MeshRenderer>();
         var meshPlantFilter = PlantMeshPrefab.GetComponent<MeshFilter>();
         var meshPlantTmp = meshPlantFilter.sharedMesh;
-        //meshPlantRenderer.GetSharedMaterials(materials);
         meshPlantTmp = Instantiate(plantMesh);
         meshPlantFilter.sharedMesh = meshPlantTmp;
         plantEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(PlantMeshPrefab, World.Active);
@@ -128,10 +128,11 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         entityManager.AddComponentData(plantEntity, new PlantComponent { timeGrown = 0,
             state = (int)PlantState.None });
 
-        // FIX: this should just be saved and then loaded when it's done
         // create atlas and texture info
-        CreateAtlasData();
-        CreateTextures();
+        CalculatePredeterminedTextures();
+        // if textures changed we'd have to re-create them with the following:
+        //CreateAtlasData();
+        //CreateTextures();
 
         // the texture indices in the world
         // clearing memory gives everything the first image in the uv's, 
@@ -275,6 +276,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         // generate the farmers
         // Create farmer entity prefab from the game object hierarchy once
         farmerEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(FarmerPrefab, World.Active);
+        entityManager.AddComponent<FarmerTag>(farmerEntity);
 
         // FIX: this could be parallelized
         Unity.Mathematics.Random rand = new Unity.Mathematics.Random(42);
@@ -289,15 +291,15 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
             var position = new float3(startX, 2, startZ);
             entityManager.SetComponentData(instance, new Translation() { Value = position });
             var data = new MovementComponent { startPos = new float2(startX, startZ), speed = 2,
-                targetPos = new float2(startX, startZ), type = (int)MovementType.Farmer };
-            //var intention = new IntentionComponent { intent = -1 };
+                targetPos = new float2(startX, startZ), };
             var entityData = new EntityInfo { type = -1 };
             entityManager.SetComponentData(instance, data);
-            //entityManager.SetComponentData(instance, intention);
             entityManager.AddComponentData(instance, entityData);
 
             // give his first command based on the 1's in the hash
             entityManager.AddComponent<NeedsTaskTag>(instance);
+            
+
         }
 
     }
@@ -373,114 +375,145 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     }
 
 
-    public TextureUV getTextureUV(string name)
-    {
+    // gets a texture that's created with the atlas from a 
+    // set of images in a directory with the same height/width
+    //public TextureUV getTextureUV(string name)
+    //{
 
-        if (textures.Length > 0)
-        {
-            for (int index = 0; index < names.Length; index++)
-            {
-                if (names[index].Equals(name))
-                {
-                    return textures[index];
-                }
-            }
-        }
-        return new TextureUV();
-    }
+    //    if (textures.Length > 0)
+    //    {
+    //        for (int index = 0; index < names.Length; index++)
+    //        {
+    //            if (names[index].Equals(name))
+    //            {
+    //                return textures[index];
+    //            }
+    //        }
+    //    }
+    //    return new TextureUV();
+    //}
 
-    // create the atlas texture image from lots of little images
-    public static void CreateAtlasData()
-    {
-        names = Directory.GetFiles("blocks");
-        textures = new TextureUV[TEXTURE_NUMBER];
+    //// create the atlas texture image from lots of little images
+    //// that are all the same width/height
+    //public static void CreateAtlasData()
+    //{
+    //    names = Directory.GetFiles("blocks");
+    //    textures = new TextureUV[TEXTURE_NUMBER];
 
-        // this assumes images are a power of 2, so it's slightly off 
-        int squareRoot = Mathf.CeilToInt(Mathf.Sqrt(names.Length));
-        int squareRootH = squareRoot;
-        atlasWidth = squareRoot * pixelWidth;
-        atlasHeight = squareRootH * pixelHeight;
-        if (squareRoot * (squareRoot - 1) > names.Length)
-        {
-            squareRootH = squareRootH - 1;
-            atlasHeight = squareRootH * pixelHeight;
-        }
+    //    // this assumes images are a power of 2, so it's slightly off 
+    //    int squareRoot = Mathf.CeilToInt(Mathf.Sqrt(names.Length));
+    //    int squareRootH = squareRoot;
+    //    atlasWidth = squareRoot * pixelWidth;
+    //    atlasHeight = squareRootH * pixelHeight;
+    //    if (squareRoot * (squareRoot - 1) > names.Length)
+    //    {
+    //        squareRootH = squareRootH - 1;
+    //        atlasHeight = squareRootH * pixelHeight;
+    //    }
 
-        // allocate space for the atlas and file data
-        atlas = new Texture2D(atlasWidth, atlasHeight);
-        byte[][] fileData = new byte[names.Length][];
+    //    // allocate space for the atlas and file data
+    //    atlas = new Texture2D(atlasWidth, atlasHeight);
+    //    byte[][] fileData = new byte[names.Length][];
 
-        // read the file data in parallel
-        Parallel.For(0, names.Length,
-        index =>
-        {
-            fileData[index] = File.ReadAllBytes(names[index]);
-        });
+    //    // read the file data in parallel
+    //    Parallel.For(0, names.Length,
+    //    index =>
+    //    {
+    //        fileData[index] = File.ReadAllBytes(names[index]);
+    //    });
 
-        int x1 = 0;
-        int y1 = 0;
-        Texture2D temp = new Texture2D(pixelWidth, pixelHeight);
-        float pWidth = (float)pixelWidth;
-        float pHeight = (float)pixelHeight;
-        float aWidth = (float)atlas.width;
-        float aHeight = (float)atlas.height;
+    //    int x1 = 0;
+    //    int y1 = 0;
+    //    Texture2D temp = new Texture2D(pixelWidth, pixelHeight);
+    //    float pWidth = (float)pixelWidth;
+    //    float pHeight = (float)pixelHeight;
+    //    float aWidth = (float)atlas.width;
+    //    float aHeight = (float)atlas.height;
 
-        for (int i = 0; i < names.Length; i++)
-        {
-            float pixelStartX = ((x1 * pWidth) + 1) / aWidth;
-            float pixelStartY = ((y1 * pHeight) + 1) / aHeight;
-            float pixelEndX = ((x1 + 1) * pWidth - 1) / aWidth;
-            float pixelEndY = ((y1 + 1) * pHeight - 1) / aHeight;
+    //    for (int i = 0; i < names.Length; i++)
+    //    {
+    //        float pixelStartX = ((x1 * pWidth) + 1) / aWidth;
+    //        float pixelStartY = ((y1 * pHeight) + 1) / aHeight;
+    //        float pixelEndX = ((x1 + 1) * pWidth - 1) / aWidth;
+    //        float pixelEndY = ((y1 + 1) * pHeight - 1) / aHeight;
 
-            textures[i] = new TextureUV
-            {
-                nameID = i,
-                pixelStartX = pixelStartX,
-                pixelStartY = pixelStartY,
-                pixelEndY = pixelEndY,
-                pixelEndX = pixelEndX,
-            };
+    //        textures[i] = new TextureUV
+    //        {
+    //            nameID = i,
+    //            pixelStartX = pixelStartX,
+    //            pixelStartY = pixelStartY,
+    //            pixelEndY = pixelEndY,
+    //            pixelEndX = pixelEndX,
+    //        };
+    //        // useful for hard coding the textures:
+    //        //UnityEngine.Debug.Log("texture " + i + " pixelStartX: " + pixelStartX + " pixelStartY " + pixelStartY +
+    //        //    " pixelEndY " + pixelEndY + " pixelEndX " + pixelEndX);
+    //        temp.LoadImage(fileData[i]);
+    //        atlas.SetPixels(x1 * pixelWidth, y1 * pixelHeight, pixelWidth, pixelHeight, temp.GetPixels());
 
-            temp.LoadImage(fileData[i]);
-            atlas.SetPixels(x1 * pixelWidth, y1 * pixelHeight, pixelWidth, pixelHeight, temp.GetPixels());
-
-            x1 = (x1 + 1) % squareRoot;
-            if (x1 == 0)
-            {
-                y1++;
-            }
+    //        x1 = (x1 + 1) % squareRoot;
+    //        if (x1 == 0)
+    //        {
+    //            y1++;
+    //        }
 
 
-        }
+    //    }
 
-        atlas.alphaIsTransparency = true;
-        atlas.wrapMode = TextureWrapMode.Clamp;
-        atlas.filterMode = FilterMode.Point;
+    //    // the following only works in the editor:
+    //    //atlas.alphaIsTransparency = true;
+    //    atlas.wrapMode = TextureWrapMode.Clamp;
+    //    atlas.filterMode = FilterMode.Point;
 
-        atlas.Apply();
-        //Debug.Log("completed atlas");
-        //Debug.Log("mipmap levels are: " + atlas.mipmapCount);
-        // test to make sure there's not an off by one error on images
-        //File.WriteAllBytes("../atlas.png", atlas.EncodeToPNG());
-    }
+    //    atlas.Apply();
+    //    // test to make sure there's not an off by one error on images
+    //    //File.WriteAllBytes("../atlas.png", atlas.EncodeToPNG());
+    //}
 
 
     // create individual textures and assign them numbers
-    protected void CreateTextures()
+    // after they're created with the atlas
+    //protected void CreateTextures()
+    //{
+    //    // create all the textures we'll use
+
+    //    TextureUV tex;
+
+    //    // DIRT
+    //    tex = getTextureUV("blocks\\ground.png");
+    //    textures[(int)BoardTypes.Board] = tex;
+
+    //    // Farmland dirt - tilled
+    //    tex = getTextureUV("blocks\\groundTilled.png");
+    //    textures[(int)BoardTypes.TilledDirt] = tex;
+
+    //}
+
+    protected void CalculatePredeterminedTextures()
     {
         // create all the textures we'll use
-
-        TextureUV tex;
+        textures = new TextureUV[TEXTURE_NUMBER];
 
         // DIRT
-        tex = getTextureUV("blocks\\ground.png");
-        textures[(int)BoardTypes.Board] = tex;
+        textures[(int)BoardTypes.Board] = new TextureUV
+        {
+            nameID = 0,
+            pixelStartX = 0.03125f,
+            pixelStartY = 0.03125f,
+            pixelEndX = 0.46875f,
+            pixelEndY = 0.46875f
+        };
 
         // Farmland dirt - tilled
-        tex = getTextureUV("blocks\\groundTilled.png");
-        textures[(int)BoardTypes.TilledDirt] = tex;
+        textures[(int)BoardTypes.TilledDirt] = new TextureUV
+        {
+            nameID = 1,
+            pixelStartX = 0.53125f,
+            pixelStartY = 0.03125f,
+            pixelEndY = 0.46875f,
+            pixelEndX = 0.96875f
+        };
 
-        //Debug.Log("textures are initialized");
 
     }
 
@@ -495,7 +528,6 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         List<Vector3> vert = new List<Vector3>(width * depth * vertexMultiplier);
         List<int> tri = new List<int>(width * depth * 6);
         List<Vector2> uv = new List<Vector2>(width * depth * vertexMultiplier);
-        //Debug.Log("generating new terrain");
 
         for (int x = 0; x < width; x++)
         {
