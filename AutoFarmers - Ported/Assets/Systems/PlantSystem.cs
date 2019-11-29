@@ -13,7 +13,7 @@ public class PlantSystem : JobComponentSystem
     private EntityCommandBufferSystem ecbs;
     private float deltaTime;
     public static NativeQueue<Entity> freePlants;
-    private NativeQueue<Entity> plantCreationDeletionInfo;
+    public static NativeQueue<Entity> plantCreationDeletionInfo;
 
     protected override void OnCreate()
     {
@@ -113,15 +113,9 @@ public class PlantSystem : JobComponentSystem
         job.plantChanges = plantCreationDeletionInfo.AsParallelWriter();
         job.translations = GetComponentDataFromEntity<Translation>(true);
         JobHandle jobHandle = job.Schedule(this, inputDependencies);
-        jobHandle.Complete();
+        ecbs.AddJobHandleForProducer(jobHandle);
+        //jobHandle.Complete();
 
-        while (plantCreationDeletionInfo.Count > 0)
-        {
-            Entity info = (Entity)plantCreationDeletionInfo.Dequeue();
-            // set deleted plants invisible and add them to the free plant list
-            entityManager.AddComponent(info, typeof(Disabled));
-            freePlants.Enqueue(info);
-        }
         return jobHandle;
     }
 }

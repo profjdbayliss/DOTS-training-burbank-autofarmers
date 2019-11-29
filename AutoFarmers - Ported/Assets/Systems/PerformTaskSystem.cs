@@ -12,15 +12,14 @@ using static Unity.Mathematics.math;
 public class PerformTaskSystem : JobComponentSystem
 {
     private EntityCommandBufferSystem ecbs;
-    private static NativeQueue<float2> tillChanges;
-    private static Store storeInfo;
-    private static NativeArray<int> plantsSold;
-    private static Unity.Mathematics.Random rand;
+    public static NativeQueue<float2> tillChanges;
+    public static Store storeInfo;
+    public static NativeArray<int> plantsSold;
+
     protected override void OnCreate()
     {
         ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
         plantsSold = new NativeArray<int>(1, Allocator.Persistent, NativeArrayOptions.ClearMemory);
-        rand = new Unity.Mathematics.Random(42);
     }
 
     public static void InitializeTillSystem(int maxFarmers)
@@ -178,107 +177,8 @@ public class PerformTaskSystem : JobComponentSystem
         //job.translations = GetComponentDataFromEntity<Translation>(true);
         job.plantInfo = GetComponentDataFromEntity<PlantComponent>(true);
         JobHandle jobHandle = job.Schedule(this, inputDependencies);
-
-        jobHandle.Complete();
-
-        // FIX: this could be a parallel for on the main thread: ComponentSystem type thing
-        // we have to have a sync point here since we're about to change all uv's for the frame
-        // This happens on main thread since uv's are Vector2 types and can't be changed inside of the job
-        while (tillChanges.Count > 0)
-        {
-            float2 pos = tillChanges.Dequeue();
-            if ((int)pos.x != -1 && (int)pos.y != -1)
-            {
-                // set the uv's on the mesh
-                // NOTE: set pos to be a specific number if you want to test it
-                Mesh tmp = GridDataInitialization.getMesh((int)pos.x, (int)pos.y,
-                    GridDataInitialization.BoardWidth);
-                int width = GridDataInitialization.getMeshWidth(tmp, (int)pos.x,
-                    (int)pos.y, GridDataInitialization.BoardWidth);
-                
-                Vector2[] uv = tmp.uv;
-                TextureUV tex = GridDataInitialization.textures[(int)GridDataInitialization.BoardTypes.TilledDirt];
-                int uvStartIndex = (GridDataInitialization.getPosForMesh((int)pos.y) +
-                    width *
-                    GridDataInitialization.getPosForMesh((int)pos.x)) * 4;
-                //Debug.Log("changing uv at! " + pos + " " + width + " " + uvStartIndex + " " + GridDataInitialization.getPosForMesh((int)pos.x) +
-                //    " " + GridDataInitialization.getPosForMesh((int)pos.y) + "array length: " + uv.Length);
-
-                uv[uvStartIndex] = new float2(tex.pixelStartX,
-                    tex.pixelStartY);
-                uv[uvStartIndex + 1] = new float2(tex.pixelStartX,
-                    tex.pixelEndY);
-                uv[uvStartIndex + 2] = new float2(tex.pixelEndX,
-                    tex.pixelEndY);
-                uv[uvStartIndex + 3] = new float2(tex.pixelEndX,
-                    tex.pixelStartY);
-                tmp.SetUVs(0, uv);
-                tmp.MarkModified();
-            }
-        }
-
-        // max this gets run is once a frame and
-        // many times it doesn't get run at all
-        if (plantsSold[0] > 0)
-        {
-            EntityManager entityManager = World.Active.EntityManager;
-            storeInfo.moneyForFarmers += plantsSold[0];
-            storeInfo.moneyForDrones += plantsSold[0];
-            if (storeInfo.moneyForFarmers >= 10 &&
-                GridDataInitialization.farmerCount < GridDataInitialization.MaxFarmers)
-            {
-
-                // spawn a new farmer - never more than 1 a frame
-                storeInfo.moneyForFarmers -= 10;
-                var instance = entityManager.Instantiate(GridDataInitialization.farmerEntity);
-                GridDataInitialization.farmerCount++;
-                int startX = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
-                int startZ = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
-
-                // Place the instantiated entity in a random position on the grid
-                var position = new float3(startX, 2, startZ);
-                entityManager.SetComponentData(instance, new Translation() { Value = position });
-                var farmerData = new MovementComponent
-                {
-                    startPos = new float2(startX, startZ),
-                    speed = 2,
-                    targetPos = new float2(startX, startZ)
-                };
-                var entityData = new EntityInfo { type = -1 };
-                entityManager.SetComponentData(instance, farmerData);
-                entityManager.AddComponentData(instance, entityData);
-                // give his first command 
-                entityManager.AddComponent<NeedsTaskTag>(instance);
-
-            }
-
-            if (storeInfo.moneyForDrones >= 50 &&
-                GridDataInitialization.droneCount < GridDataInitialization.MaxDrones)
-            {
-                // spawn a new drone
-                storeInfo.moneyForDrones -= 50;
-                var instance = entityManager.Instantiate(GridDataInitialization.droneEntity);
-                GridDataInitialization.droneCount++;
-                int startX = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
-                int startZ = System.Math.Abs(rand.NextInt()) % GridData.GetInstance().width;
-
-                // Place the instantiated entity in a random position on the grid
-                var position = new float3(startX, 2, startZ);
-                entityManager.SetComponentData(instance, new Translation() { Value = position });
-                var droneData = new MovementComponent
-                {
-                    startPos = new float2(startX, startZ),
-                    speed = 2,
-                    targetPos = new float2(startX, startZ),
-                };
-                var entityData = new EntityInfo { type = -1 };
-                entityManager.SetComponentData(instance, droneData);
-                entityManager.SetComponentData(instance, entityData);
-                // give his first command 
-                entityManager.AddComponent<NeedsTaskTag>(instance);
-            }
-            plantsSold[0] = 0;
-        }
+        ecbs.AddJobHandleForProducer(jobHandle);
+        //jobHandle.Complete();
 
         return jobHandle;
     }

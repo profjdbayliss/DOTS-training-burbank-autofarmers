@@ -244,12 +244,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 776a6caafaf5da94e9fe1d7a365e0b0d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boardWidth: 500
+  boardWidth: 200
   rockSpawnAttempts: 7000
   storeCount: 700
-  maxFarmers: 1000
-  farmerNumber: 50
-  maxDrones: 250
+  maxFarmers: 5000
+  farmerNumber: 500
+  maxDrones: 1000
   RockPrefab: {fileID: 8408007631743160701, guid: 3eed0651058123240bd33f559d605398,
     type: 3}
   StorePrefab: {fileID: 1660769586978544541, guid: fb61399e21e6d694a94f8759b74fef5c,

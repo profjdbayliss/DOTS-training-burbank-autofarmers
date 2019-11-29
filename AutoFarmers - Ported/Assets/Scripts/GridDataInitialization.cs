@@ -87,7 +87,6 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         farmerCount = 0;
         BoardWidth = boardWidth;
         PerformTaskSystem.InitializeTillSystem(maxFarmers);
-        TaskSystem.InitializeSearchSystem(maxFarmers);
 
         // set up mesh rendering from prefab
         MeshRenderer meshRenderer = TilePrefab.GetComponent<MeshRenderer>();
