@@ -126,7 +126,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         entityManager.SetComponentData(plantEntity, new Translation { Value = new float3(-1, -5, -1) });    
         entityManager.AddComponentData(plantEntity, new NonUniformScale { Value = new float3(1.0f, 2.0f, 1.0f) });
         entityManager.AddComponentData(plantEntity, new PlantComponent { timeGrown = 0,
-            state = (int)PlantState.None });
+            state = (int)PlantState.None, reserveIndex = -1 });
 
         // create atlas and texture info
         CalculatePredeterminedTextures();

@@ -70,11 +70,11 @@ public class PlantSystem : JobComponentSystem
                 case PlantState.Deleted:
                     // since multiple entities can try to delete this one
                     // we need to make sure it exists first
-                    if (translations.Exists(entity))
-                    {
+                    //if (translations.Exists(entity))
+                    //{
                         //UnityEngine.Debug.Log("deleting a plant " + entity.Index);
                         ecb.DestroyEntity(index, entity);
-                    }
+                    //}
                     break;
                 default:
                     break;

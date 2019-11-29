@@ -51,7 +51,7 @@ public class PerformTaskSystem : JobComponentSystem
 
     [RequireComponentTag(typeof(PerformTaskTag))]
     [BurstCompile]
-    struct PerformTaskSystemJob : IJobForEachWithEntity<Translation, Rotation, EntityInfo>
+    struct PerformTaskSystemJob : IJobForEachWithEntity<Translation, EntityInfo>
     {
         // var's used by multiple tasks
         public EntityCommandBuffer.Concurrent ecb;
@@ -60,11 +60,14 @@ public class PerformTaskSystem : JobComponentSystem
         // var's used by till task:
         public NativeQueue<float2>.ParallelWriter changes;
 
+        // var's used by harvest
+        [ReadOnly] public ComponentDataFromEntity<PlantComponent> plantInfo;
+
         // var used by store:
         public NativeArray<int> plantsSold;
-        [ReadOnly] public ComponentDataFromEntity<Translation> translations;
+        //[ReadOnly] public ComponentDataFromEntity<Translation> translations;
 
-        public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref Rotation rotation, ref EntityInfo entityInfo)
+        public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref EntityInfo entityInfo)
         {
             Tiles state = (Tiles)entityInfo.type;
 
@@ -99,39 +102,52 @@ public class PerformTaskSystem : JobComponentSystem
                     break;
                 case Tiles.Harvest:
                     EntityInfo harvestInfo = new EntityInfo { type = (int)Tiles.Till };
-
-                    if (grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
-                    harvestInfo))
+                    if (plantInfo.Exists(entityInfo.specificEntity))
                     {
-                        //UnityEngine.Debug.Log("harvesting : " + entityInfo.specificEntity.Index);
-                        // plant needs to follow the farmer
-
-                        PlantComponent plantInfo = new PlantComponent
+                        PlantComponent plant = plantInfo[entityInfo.specificEntity];
+                        if (plant.reserveIndex == entity.Index &&
+                                grid.TryAdd(GridData.ConvertToHash((int)translation.Value.x, (int)translation.Value.z),
+                        harvestInfo))
                         {
-                            timeGrown = PlantSystem.MAX_GROWTH,
-                            state = (int)PlantState.Following,
-                            farmerToFollow = entity
-                        };
-                        ecb.SetComponent(entityInfo.specificEntity.Index,
-                             entityInfo.specificEntity, plantInfo);
+                            //UnityEngine.Debug.Log("harvesting : " + entityInfo.specificEntity.Index);
+                            // plant needs to follow the farmer
+
+                            PlantComponent plantData2 = new PlantComponent
+                            {
+                                timeGrown = PlantSystem.MAX_GROWTH,
+                                state = (int)PlantState.Following,
+                                farmerToFollow = entity,
+                                reserveIndex = plant.reserveIndex
+                            };
+                            ecb.SetComponent(entityInfo.specificEntity.Index,
+                                 entityInfo.specificEntity, plantData2);
+                        }
+                        else if (plant.reserveIndex != entity.Index)
+                        {
+                            entityInfo.type = (short)Tiles.None;
+                        }
+                    } else
+                    {
+                        entityInfo.type = (short)Tiles.None;
                     }
+                    
                     ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
                     ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
                     break;
                 case Tiles.Store:
                     // since multiple entities can try to delete this one
                     // we need to make sure it exists first
-                    if (translations.Exists(entityInfo.specificEntity))
+                    //if (translations.Exists(entityInfo.specificEntity))
+                    //{
+                    // we need to remove the plant from the farmer
+                    PlantComponent plantData = new PlantComponent
                     {
-                        // we need to remove the plant from the farmer
-                        PlantComponent plantInfo = new PlantComponent
-                        {
-                            timeGrown = PlantSystem.MAX_GROWTH,
-                            state = (int)PlantState.Deleted
-                        };
-                        ecb.SetComponent(entityInfo.specificEntity.Index,
-                             entityInfo.specificEntity, plantInfo);
-                    }
+                        timeGrown = PlantSystem.MAX_GROWTH,
+                        state = (int)PlantState.Deleted
+                    };
+                    ecb.SetComponent(entityInfo.specificEntity.Index,
+                         entityInfo.specificEntity, plantData);
+                    //}
                     ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
                     ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
 
@@ -144,7 +160,7 @@ public class PerformTaskSystem : JobComponentSystem
                 default:
                     break;
             }
-           
+
 
         }
     }
@@ -159,7 +175,8 @@ public class PerformTaskSystem : JobComponentSystem
         job.changes = tillChanges.AsParallelWriter();
         job.grid = data.gridStatus.AsParallelWriter();
         job.plantsSold = plantsSold;
-        job.translations = GetComponentDataFromEntity<Translation>(true);
+        //job.translations = GetComponentDataFromEntity<Translation>(true);
+        job.plantInfo = GetComponentDataFromEntity<PlantComponent>(true);
         JobHandle jobHandle = job.Schedule(this, inputDependencies);
 
         jobHandle.Complete();
@@ -205,10 +222,10 @@ public class PerformTaskSystem : JobComponentSystem
             EntityManager entityManager = World.Active.EntityManager;
             storeInfo.moneyForFarmers += plantsSold[0];
             storeInfo.moneyForDrones += plantsSold[0];
-            if (storeInfo.moneyForFarmers >= 10 && 
+            if (storeInfo.moneyForFarmers >= 10 &&
                 GridDataInitialization.farmerCount < GridDataInitialization.MaxFarmers)
             {
-                
+
                 // spawn a new farmer - never more than 1 a frame
                 storeInfo.moneyForFarmers -= 10;
                 var instance = entityManager.Instantiate(GridDataInitialization.farmerEntity);
@@ -219,8 +236,12 @@ public class PerformTaskSystem : JobComponentSystem
                 // Place the instantiated entity in a random position on the grid
                 var position = new float3(startX, 2, startZ);
                 entityManager.SetComponentData(instance, new Translation() { Value = position });
-                var farmerData = new MovementComponent { startPos = new float2(startX, startZ), speed = 2,
-                    targetPos = new float2(startX, startZ) };
+                var farmerData = new MovementComponent
+                {
+                    startPos = new float2(startX, startZ),
+                    speed = 2,
+                    targetPos = new float2(startX, startZ)
+                };
                 var entityData = new EntityInfo { type = -1 };
                 entityManager.SetComponentData(instance, farmerData);
                 entityManager.AddComponentData(instance, entityData);
@@ -242,8 +263,12 @@ public class PerformTaskSystem : JobComponentSystem
                 // Place the instantiated entity in a random position on the grid
                 var position = new float3(startX, 2, startZ);
                 entityManager.SetComponentData(instance, new Translation() { Value = position });
-                var droneData = new MovementComponent { startPos = new float2(startX, startZ), speed = 2,
-                    targetPos = new float2(startX, startZ),  };
+                var droneData = new MovementComponent
+                {
+                    startPos = new float2(startX, startZ),
+                    speed = 2,
+                    targetPos = new float2(startX, startZ),
+                };
                 var entityData = new EntityInfo { type = -1 };
                 entityManager.SetComponentData(instance, droneData);
                 entityManager.SetComponentData(instance, entityData);

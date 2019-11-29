@@ -7,12 +7,12 @@ using UnityEngine;
 // Data structure: hash table with Entity information per tile position
 // where it exists since it's a sparse data set for the majority
 // of the sim
-public class GridData 
+public class GridData
 {
     private static GridData data = null;
 
     const int BOARD_MULTIPLIER = 1000; // max board x and y size is 999
-                                        // x and y are just concatenated to make the key
+                                       // x and y are just concatenated to make the key
 
     public int width = 10;
     public NativeHashMap<int, EntityInfo> gridStatus;
@@ -22,12 +22,13 @@ public class GridData
         if (data != null)
         {
             return data;
-        } else
+        }
+        else
         {
             data = new GridData();
             return data;
         }
-        
+
     }
 
 
@@ -45,13 +46,13 @@ public class GridData
     // is assumed just to be the width of the board
     public void Initialize(int boardWidth)
     {
-        if(gridStatus.IsCreated)
+        if (gridStatus.IsCreated)
         {
             gridStatus.Dispose();
         }
 
         // we pass 
-        gridStatus = new NativeHashMap<int, EntityInfo>(boardWidth*boardWidth+1, Allocator.Persistent);
+        gridStatus = new NativeHashMap<int, EntityInfo>(boardWidth * boardWidth + 1, Allocator.Persistent);
         this.width = boardWidth;
     }
 
@@ -64,7 +65,7 @@ public class GridData
     public static EntityInfo getFullHashValue(NativeHashMap<int, EntityInfo> hashMap, int row, int col)
     {
         EntityInfo returnValue;
-        hashMap.TryGetValue(GridData.ConvertToHash(row, col), out returnValue);       
+        hashMap.TryGetValue(GridData.ConvertToHash(row, col), out returnValue);
         return returnValue;
     }
 
@@ -77,7 +78,7 @@ public class GridData
     // the row and col are concatenated to form the key
     public static int getCol(int key)
     {
-        return key - getRow(key)* BOARD_MULTIPLIER;
+        return key - getRow(key) * BOARD_MULTIPLIER;
     }
 
     // assumes good data input for positions and is not checking for positions off the board
@@ -93,7 +94,7 @@ public class GridData
         int j = startY;
         int countEnd = 0;
         EntityInfo value;
-        if (endX-startX != 0)
+        if (endX - startX != 0)
         {
             countEnd = endX;
             // this is the dir we're searching
@@ -120,7 +121,7 @@ public class GridData
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
                         //Debug.Log("found something!");
-                        
+
                         if (value.type == ROCK)
                         {
                             return new float2(i, j);
@@ -129,7 +130,8 @@ public class GridData
                 }
             }
 
-        } else
+        }
+        else
         {
             // this is the dir we're searching
             i = startX;
@@ -155,7 +157,7 @@ public class GridData
             {
                 for (; j <= countEnd; j++)
                 {
-                   // Debug.Log("rock4: " + i + " " + j + " " + value);
+                    // Debug.Log("rock4: " + i + " " + j + " " + value);
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
                         //Debug.Log("found something!");
@@ -167,7 +169,7 @@ public class GridData
                     }
                 }
             }
- 
+
         }
 
         // no rocks on path to middle, so try path from middle to end
@@ -259,9 +261,8 @@ public class GridData
 
     // looks for a particular status id in a surrounding square radius
     // from a position
-    // Doesn't look for the best position, looks for the first randomly
-    // starting either at the first part of the array of locations or
-    // from the end to the first
+    // Doesn't look for the best position, looks for the first 
+    // from a random start on the grid radius
     public static float2 Search(NativeHashMap<int, EntityInfo> hashMap, float2 currentPos, int radius, int statusToFind, int sizeX, int sizeZ)
     {
         Unity.Mathematics.Random rand;
@@ -273,31 +274,88 @@ public class GridData
         {
             rand = new Unity.Mathematics.Random((uint)currentPos.x);
         }
-        
+
+        int randStartX = (int)currentPos.x - radius + (Mathf.Abs(rand.NextInt()) % radius);
+        int randStartY = (int)currentPos.y - radius + (Mathf.Abs(rand.NextInt()) % radius);
+        if (randStartX < 0)
+            randStartX = 0;
+        else if (randStartX >= sizeX)
+            randStartX = sizeX - 1;
+        if (randStartY < 0)
+            randStartY = 0;
+        else if (randStartY >= sizeZ)
+            randStartY = sizeZ - 1;
         int startX = (int)currentPos.x - radius;
         int startY = (int)currentPos.y - radius;
         if (startX < 0) startX = 0;
         if (startY < 0) startY = 0;
+        if (startX >= sizeX)
+        {
+            startX = sizeX - 1;
 
-        int endX = (int)currentPos.x + radius+1;
-        int endY = (int)currentPos.y + radius+1;
+        }
+        if (startY >= sizeZ)
+        {
+            startY = sizeZ - 1;
+        }
+        int endX = (int)currentPos.x + radius + 1;
+        int endY = (int)currentPos.y + radius + 1;
         if (endX >= sizeX)
         {
-            endX = sizeX-1;
-           
+            endX = sizeX - 1;
+
         }
         if (endY >= sizeZ)
         {
-            endY = sizeZ-1;
+            endY = sizeZ - 1;
         }
 
         EntityInfo value;
         if ((Mathf.Abs(rand.NextInt())%100) > 50)
         {
-            //Debug.Log("positive search position");
-            for (int i = startX; i <= endX; i++)
+        //Debug.Log("positive search position");
+        for (int i = randStartX; i <= endX; i++)
+        {
+            for (int j = randStartY; j <= endY; j++)
             {
-                for (int j = startY; j <= endY; j++)
+                if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                {
+                    if (value.type == statusToFind)
+                    {
+                        return new float2(i, j);
+                    }
+                }
+                else if (statusToFind == 0)
+                {
+                    return new float2(i, j);
+                }
+            }
+        }
+
+        for (int i = startX; i < randStartX; i++)
+        {
+            for (int j = startY; j < randStartY; j++)
+            {
+                if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                {
+                    if (value.type == statusToFind)
+                    {
+                        return new float2(i, j);
+                    }
+                }
+                else if (statusToFind == 0)
+                {
+                    return new float2(i, j);
+                }
+            }
+        }
+        }
+        else
+        {
+            //Debug.Log("negative search direction");
+            for (int i = randStartX; i >= startX; i--)
+            {
+                for (int j = randStartY; j >= startY; j--)
                 {
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
@@ -312,12 +370,9 @@ public class GridData
                     }
                 }
             }
-        } else
-        {
-            //Debug.Log("negative search direction");
-            for (int i = endX; i >= startX; i--)
+            for (int i = endX; i > randStartX; i--)
             {
-                for (int j = endY; j >= startY; j--)
+                for (int j = endY; j > randStartY; j--)
                 {
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
@@ -355,11 +410,29 @@ public class GridData
             rand = new Unity.Mathematics.Random((uint)currentPos.x);
         }
 
+        int randStartX = (int)currentPos.x - radius + (Mathf.Abs(rand.NextInt()) % radius);
+        int randStartY = (int)currentPos.y - radius + (Mathf.Abs(rand.NextInt()) % radius);
+        if (randStartX < 0)
+            randStartX = 0;
+        else if (randStartX >= sizeX)
+            randStartX = sizeX - 1;
+        if (randStartY < 0)
+            randStartY = 0;
+        else if (randStartY >= sizeZ)
+            randStartY = sizeZ - 1;
         int startX = (int)currentPos.x - radius;
         int startY = (int)currentPos.y - radius;
         if (startX < 0) startX = 0;
         if (startY < 0) startY = 0;
+        if (startX >= sizeX)
+        {
+            startX = sizeX - 1;
 
+        }
+        if (startY >= sizeZ)
+        {
+            startY = sizeZ - 1;
+        }
         int endX = (int)currentPos.x + radius + 1;
         int endY = (int)currentPos.y + radius + 1;
         if (endX >= sizeX)
@@ -376,9 +449,9 @@ public class GridData
         if ((Mathf.Abs(rand.NextInt()) % 100) > 50)
         {
             //Debug.Log("positive search position");
-            for (int i = startX; i <= endX; i++)
+            for (int i = randStartX; i <= endX; i++)
             {
-                for (int j = startY; j <= endY; j++)
+                for (int j = randStartY; j <= endY; j++)
                 {
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
@@ -399,13 +472,60 @@ public class GridData
                     }
                 }
             }
-        }
-        else
+
+            for (int i = startX; i < randStartX; i++)
+            {
+                for (int j = startY; j < randStartY; j++)
+                {
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (value.type == statusToFind)
+                        {
+                            // check to make sure plant is grown before harvesting
+                            // if it's not then find something else to do
+                            PlantComponent plantInfo = IsPlantType[value.specificEntity];
+                            if (plantInfo.timeGrown >= plantGrowthMax)
+                            {
+                                return new float2(i, j);
+                            }
+                        }
+                    }
+                    else if (statusToFind == 0)
+                    {
+                        return new float2(i, j);
+                    }
+                }
+            }
+        } else
         {
-            //Debug.Log("negative search direction");
-            for (int i = endX; i >= startX; i--)
+            //Debug.Log("positive search position");
+            for (int i = randStartX; i >= startX; i--)
             {
-                for (int j = endY; j >= startY; j--)
+                for (int j = randStartY; j >= startY; j--)
+                {
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (value.type == statusToFind)
+                        {
+                            // check to make sure plant is grown before harvesting
+                            // if it's not then find something else to do
+                            PlantComponent plantInfo = IsPlantType[value.specificEntity];
+                            if (plantInfo.timeGrown >= plantGrowthMax)
+                            {
+                                return new float2(i, j);
+                            }
+                        }
+                    }
+                    else if (statusToFind == 0)
+                    {
+                        return new float2(i, j);
+                    }
+                }
+            }
+
+            for (int i = endX; i > randStartX; i--)
+            {
+                for (int j = endY; j > randStartY; j--)
                 {
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
@@ -427,6 +547,88 @@ public class GridData
                 }
             }
         }
+        //Unity.Mathematics.Random rand;
+        //if ((uint)currentPos.x == 0)
+        //{
+        //    rand = new Unity.Mathematics.Random(10);
+        //}
+        //else
+        //{
+        //    rand = new Unity.Mathematics.Random((uint)currentPos.x);
+        //}
+
+        //int startX = (int)currentPos.x - radius;
+        //int startY = (int)currentPos.y - radius;
+        //if (startX < 0) startX = 0;
+        //if (startY < 0) startY = 0;
+
+        //int endX = (int)currentPos.x + radius + 1;
+        //int endY = (int)currentPos.y + radius + 1;
+        //if (endX >= sizeX)
+        //{
+        //    endX = sizeX - 1;
+
+        //}
+        //if (endY >= sizeZ)
+        //{
+        //    endY = sizeZ - 1;
+        //}
+
+        //EntityInfo value;
+        //if ((Mathf.Abs(rand.NextInt()) % 100) > 50)
+        //{
+        //    //Debug.Log("positive search position");
+        //    for (int i = startX; i <= endX; i++)
+        //    {
+        //        for (int j = startY; j <= endY; j++)
+        //        {
+        //            if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+        //            {
+        //                if (value.type == statusToFind)
+        //                {
+        //                    // check to make sure plant is grown before harvesting
+        //                    // if it's not then find something else to do
+        //                    PlantComponent plantInfo = IsPlantType[value.specificEntity];
+        //                    if (plantInfo.timeGrown >= plantGrowthMax)
+        //                    {
+        //                        return new float2(i, j);
+        //                    }
+        //                }
+        //            }
+        //            else if (statusToFind == 0)
+        //            {
+        //                return new float2(i, j);
+        //            }
+        //        }
+        //    }
+        //}
+        //else
+        //{
+        //    //Debug.Log("negative search direction");
+        //    for (int i = endX; i >= startX; i--)
+        //    {
+        //        for (int j = endY; j >= startY; j--)
+        //        {
+        //            if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+        //            {
+        //                if (value.type == statusToFind)
+        //                {
+        //                    // check to make sure plant is grown before harvesting
+        //                    // if it's not then find something else to do
+        //                    PlantComponent plantInfo = IsPlantType[value.specificEntity];
+        //                    if (plantInfo.timeGrown >= plantGrowthMax)
+        //                    {
+        //                        return new float2(i, j);
+        //                    }
+        //                }
+        //            }
+        //            else if (statusToFind == 0)
+        //            {
+        //                return new float2(i, j);
+        //            }
+        //        }
+        //    }
+        //}
         return new float2(-1, -1);
     }
 

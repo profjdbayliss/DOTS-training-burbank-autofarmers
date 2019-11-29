@@ -247,9 +247,9 @@ MonoBehaviour:
   boardWidth: 50
   rockSpawnAttempts: 2000
   storeCount: 20
-  maxFarmers: 50
-  farmerNumber: 2
-  maxDrones: 10
+  maxFarmers: 500
+  farmerNumber: 5
+  maxDrones: 100
   RockPrefab: {fileID: 8408007631743160701, guid: 3eed0651058123240bd33f559d605398,
     type: 3}
   StorePrefab: {fileID: 1660769586978544541, guid: fb61399e21e6d694a94f8759b74fef5c,

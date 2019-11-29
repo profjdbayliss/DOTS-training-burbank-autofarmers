@@ -15,8 +15,14 @@ public class TaskSystem : JobComponentSystem
     public NativeArray<int> randomValues;
     public Unity.Mathematics.Random rand;
     const int RANDOM_SIZE = 256;
-    private static NativeQueue<int> hashRemovalsFarmer;
-    private static NativeQueue<int> hashRemovalsDrone;
+    private static NativeQueue<RemovalInfo> hashRemovalsFarmer;
+    private static NativeQueue<RemovalInfo> hashRemovalsDrone;
+
+    private struct RemovalInfo
+    {
+        public int key;
+        public Entity requestingEntity;
+    }
 
     protected override void OnCreate()
     {
@@ -57,7 +63,7 @@ public class TaskSystem : JobComponentSystem
             hashRemovalsFarmer.Dispose();
         }
 
-        hashRemovalsFarmer = new NativeQueue<int>(Allocator.Persistent);
+        hashRemovalsFarmer = new NativeQueue<RemovalInfo>(Allocator.Persistent);
 
 
         if (hashRemovalsDrone.IsCreated)
@@ -65,7 +71,7 @@ public class TaskSystem : JobComponentSystem
             hashRemovalsDrone.Dispose();
         }
 
-        hashRemovalsDrone = new NativeQueue<int>(Allocator.Persistent);
+        hashRemovalsDrone = new NativeQueue<RemovalInfo>(Allocator.Persistent);
 
     }
 
@@ -84,7 +90,7 @@ public class TaskSystem : JobComponentSystem
         [ReadOnly] public ComponentDataFromEntity<PlantComponent> IsPlantType;
         [ReadOnly] public float plantGrowthMax;
         // var for tilling
-        public NativeQueue<int>.ParallelWriter removals;
+        public NativeQueue<RemovalInfo>.ParallelWriter removals;
 
         // randomly determines a task and then finds the right tiles that
         // will help the task occur
@@ -211,7 +217,7 @@ public class TaskSystem : JobComponentSystem
                     ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
                     ecb.AddComponent(index, entity, typeof(MovingTag));
                     int key = GridData.ConvertToHash((int)rockPos.x, (int)rockPos.y);
-                    removals.Enqueue(key);
+                    removals.Enqueue(new RemovalInfo { key = key, requestingEntity = entity });
                 }
                 else
                 {
@@ -242,7 +248,7 @@ public class TaskSystem : JobComponentSystem
                             //Debug.Log("rock task happening : " + rockEntityIndex + " " + tmp.Index);
                             entityIntent = fullRockData;
                             // remove the rock from the hash so that nobody else tries to get it
-                            removals.Enqueue(key);
+                            removals.Enqueue(new RemovalInfo { key = key, requestingEntity = entity });
                             break;
                         case Tiles.Till:
                             EntityInfo tillData = new EntityInfo { type = (int)Tiles.Till };
@@ -250,7 +256,7 @@ public class TaskSystem : JobComponentSystem
                             break;
                         case Tiles.Plant:
                             key = GridData.ConvertToHash((int)foundLocation.x, (int)foundLocation.y);
-                            removals.Enqueue(key);
+                            removals.Enqueue(new RemovalInfo { key = key, requestingEntity = entity });
                             EntityInfo plantData = new EntityInfo { type = (int)Tiles.Plant };
                             entityIntent = plantData;
                             break;
@@ -264,7 +270,7 @@ public class TaskSystem : JobComponentSystem
 
                             if (plantInfo.timeGrown >= plantGrowthMax)
                             {
-                                removals.Enqueue(key);
+                                removals.Enqueue(new RemovalInfo { key = key, requestingEntity = entity });
                                 EntityInfo harvestData = new EntityInfo { type = (int)Tiles.Harvest, specificEntity = fullData.specificEntity };
                                 entityIntent = harvestData;
                                 //Debug.Log("plant ready to harvest at : " + fullData.specificEntity.Index + " " + index + " " +
@@ -316,7 +322,7 @@ public class TaskSystem : JobComponentSystem
         [ReadOnly] public ComponentDataFromEntity<PlantComponent> IsPlantType;
         [ReadOnly] public float plantGrowthMax;
         // var for tilling
-        public NativeQueue<int>.ParallelWriter removals;
+        public NativeQueue<RemovalInfo>.ParallelWriter removals;
 
         // randomly determines a task and then finds the right tiles that
         // will help the task occur
@@ -423,7 +429,7 @@ public class TaskSystem : JobComponentSystem
                     ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
                     ecb.AddComponent(index, entity, typeof(MovingTag));
                     int key = GridData.ConvertToHash((int)rockPos.x, (int)rockPos.y);
-                    removals.Enqueue(key);
+                    removals.Enqueue(new RemovalInfo { key = key, requestingEntity = entity });
                 }
                 else
                 {
@@ -456,7 +462,7 @@ public class TaskSystem : JobComponentSystem
 
                             if (plantInfo.timeGrown >= plantGrowthMax)
                             {
-                                removals.Enqueue(key);
+                                removals.Enqueue(new RemovalInfo { key = key, requestingEntity = entity });
                                 EntityInfo harvestData = new EntityInfo { type = (int)Tiles.Harvest, specificEntity = fullData.specificEntity };
                                 entityIntent = harvestData;
                                 //Debug.Log("plant ready to harvest at : " + fullData.specificEntity.Index + " " + index + " " +
@@ -532,12 +538,47 @@ public class TaskSystem : JobComponentSystem
         jobHandle.Complete();
         jobHandleDrone.Complete();
 
+
+        // take care of drones
+        while (hashRemovalsDrone.Count > 0)
+        {
+            RemovalInfo remInfo = (RemovalInfo)hashRemovalsDrone.Dequeue();
+            int key = remInfo.key;
+            EntityInfo value;
+            if (data.gridStatus.TryGetValue(key, out value))
+            {
+                if (value.type == (int)Tiles.Plant)
+                {
+                    // this is a harvest, so try to remove and if we can
+                    // then set up the entity to harvest it
+                    if (data.gridStatus.ContainsKey(key))
+                    {
+                        data.gridStatus.Remove(key);
+                        // set reserve data in plant component for this entity
+                        entityManager.SetComponentData(value.specificEntity, new PlantComponent
+                        {
+                            timeGrown = PlantSystem.MAX_GROWTH,
+                            state = (int)PlantState.None,
+                            reserveIndex = remInfo.requestingEntity.Index,
+                        });
+                    }
+                    
+                } else
+                {
+                    data.gridStatus.Remove(key);
+                }
+
+            }
+
+        }
+
         // this happens in the main thread
         // removal isn't in the parallel writer for the hash table
         // so it's just going to have to happen sequentially
         while (hashRemovalsFarmer.Count > 0)
         {
-            int key = hashRemovalsFarmer.Dequeue();
+            RemovalInfo remInfo = (RemovalInfo)hashRemovalsFarmer.Dequeue();
+            int key = remInfo.key;
             EntityInfo value;
             if (data.gridStatus.TryGetValue(key, out value))
             {
@@ -569,6 +610,22 @@ public class TaskSystem : JobComponentSystem
                     }
                 }
                 else
+                if (value.type == (int)Tiles.Plant)
+                {
+                    // this is a harvest, so try to remove and if we can
+                    // then set up the entity to harvest it
+                    if (data.gridStatus.ContainsKey(key))
+                    {
+                        data.gridStatus.Remove(key);
+                        // set reserve data in plant component for this entity
+                        entityManager.SetComponentData(value.specificEntity,  new PlantComponent {
+                            timeGrown = PlantSystem.MAX_GROWTH,
+                            state = (int)PlantState.None,
+                            reserveIndex = remInfo.requestingEntity.Index,
+                        });                    
+                    } 
+                }
+                else
                 {
                     data.gridStatus.Remove(key);
                 }
@@ -576,17 +633,7 @@ public class TaskSystem : JobComponentSystem
 
         }
 
-        // take care of drones
-        while (hashRemovalsDrone.Count > 0)
-        {
-            int key = hashRemovalsDrone.Dequeue();
-            EntityInfo value;
-            if (data.gridStatus.TryGetValue(key, out value))
-            {
-                data.gridStatus.Remove(key);
-            }
 
-        }
 
         return jobHandle;
     }
