@@ -195,13 +195,15 @@ public class PerformTaskSystem : JobComponentSystem
                     GridDataInitialization.BoardWidth);
                 int width = GridDataInitialization.getMeshWidth(tmp, (int)pos.x,
                     (int)pos.y, GridDataInitialization.BoardWidth);
-                //Debug.Log("changing uv at! " + pos + " " + width );
-
+                
                 Vector2[] uv = tmp.uv;
                 TextureUV tex = GridDataInitialization.textures[(int)GridDataInitialization.BoardTypes.TilledDirt];
                 int uvStartIndex = (GridDataInitialization.getPosForMesh((int)pos.y) +
                     width *
                     GridDataInitialization.getPosForMesh((int)pos.x)) * 4;
+                //Debug.Log("changing uv at! " + pos + " " + width + " " + uvStartIndex + " " + GridDataInitialization.getPosForMesh((int)pos.x) +
+                //    " " + GridDataInitialization.getPosForMesh((int)pos.y) + "array length: " + uv.Length);
+
                 uv[uvStartIndex] = new float2(tex.pixelStartX,
                     tex.pixelStartY);
                 uv[uvStartIndex + 1] = new float2(tex.pixelStartX,

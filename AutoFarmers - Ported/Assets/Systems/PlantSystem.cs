@@ -12,10 +12,27 @@ public class PlantSystem : JobComponentSystem
     public static float MAX_GROWTH = 120.0f;
     private EntityCommandBufferSystem ecbs;
     private float deltaTime;
+    public static NativeQueue<Entity> freePlants;
+    private NativeQueue<Entity> plantCreationDeletionInfo;
 
     protected override void OnCreate()
     {
         ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
+        freePlants = new NativeQueue<Entity>(Allocator.Persistent);
+        plantCreationDeletionInfo = new NativeQueue<Entity>(Allocator.Persistent);
+    }
+
+    protected override void OnDestroy()
+    {
+        if (freePlants.IsCreated)
+        {
+            freePlants.Dispose();
+        }
+        if (plantCreationDeletionInfo.IsCreated)
+        {
+            plantCreationDeletionInfo.Dispose();
+        }
+        base.OnDestroy();
     }
 
     [BurstCompile]
@@ -26,17 +43,18 @@ public class PlantSystem : JobComponentSystem
         [ReadOnly] public ComponentDataFromEntity<Translation> translations;
         [ReadOnly] public float maxGrowth;
         public EntityCommandBuffer.Concurrent ecb;
+        public NativeQueue<Entity>.ParallelWriter plantChanges;
 
-        public void Execute(Entity entity, int index, 
+        public void Execute(Entity entity, int index,
             ref PlantComponent plantComponent,
             ref NonUniformScale scale)
         {
             PlantState state = (PlantState)plantComponent.state;
 
-            switch(state)
+            switch (state)
             {
                 case PlantState.None:
-                    
+
                     break;
                 case PlantState.Growing:
                     float currentTotalTime = deltaTime + plantComponent.timeGrown;
@@ -72,25 +90,38 @@ public class PlantSystem : JobComponentSystem
                     // we need to make sure it exists first
                     //if (translations.Exists(entity))
                     //{
-                        //UnityEngine.Debug.Log("deleting a plant " + entity.Index);
-                        ecb.DestroyEntity(index, entity);
+                    //UnityEngine.Debug.Log("deleting a plant " + entity.Index);
+                    //ecb.DestroyEntity(index, entity);
+                    plantChanges.Enqueue(entity);
                     //}
                     break;
                 default:
                     break;
             }
-            
+
         }
     }
-    
+
     protected override JobHandle OnUpdate(JobHandle inputDependencies)
     {
+        EntityManager entityManager = World.Active.EntityManager;
+
         var job = new PlantSystemJob();
         job.deltaTime = UnityEngine.Time.deltaTime;
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.maxGrowth = MAX_GROWTH;
+        job.plantChanges = plantCreationDeletionInfo.AsParallelWriter();
         job.translations = GetComponentDataFromEntity<Translation>(true);
+        JobHandle jobHandle = job.Schedule(this, inputDependencies);
+        jobHandle.Complete();
 
-        return job.Schedule(this, inputDependencies);
+        while (plantCreationDeletionInfo.Count > 0)
+        {
+            Entity info = (Entity)plantCreationDeletionInfo.Dequeue();
+            // set deleted plants invisible and add them to the free plant list
+            entityManager.AddComponent(info, typeof(Disabled));
+            freePlants.Enqueue(info);
+        }
+        return jobHandle;
     }
 }

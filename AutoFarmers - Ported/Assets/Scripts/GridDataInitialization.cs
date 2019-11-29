@@ -780,9 +780,9 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         } else
         {
             // this is on an edge: x, y, or both
-            if (z  > (MAX_MESH_WIDTH * (width / MAX_MESH_WIDTH)))
+            if (z  >= (MAX_MESH_WIDTH * (width / MAX_MESH_WIDTH)))
             {
-               // Debug.Log("mesh width 2 : " + (width - MAX_MESH_WIDTH * (width / MAX_MESH_WIDTH)));
+               //Debug.Log("mesh width 2 : " + (width - MAX_MESH_WIDTH * (width / MAX_MESH_WIDTH)));
                 return width - MAX_MESH_WIDTH*(width/MAX_MESH_WIDTH);
 
             } 

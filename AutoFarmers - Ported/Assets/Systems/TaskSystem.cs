@@ -531,8 +531,8 @@ public class TaskSystem : JobComponentSystem
         jobDrone.IsPlantType = GetComponentDataFromEntity<PlantComponent>(true);
         jobDrone.plantGrowthMax = PlantSystem.MAX_GROWTH;
 
-       var jobHandleDrone = jobDrone.Schedule(this, jobHandle);
-       ecbs.AddJobHandleForProducer(jobHandleDrone);
+        var jobHandleDrone = jobDrone.Schedule(this, jobHandle);
+        ecbs.AddJobHandleForProducer(jobHandleDrone);
 
         // forced to sync here to remove all hash items at the same time
         jobHandle.Complete();
@@ -562,8 +562,9 @@ public class TaskSystem : JobComponentSystem
                             reserveIndex = remInfo.requestingEntity.Index,
                         });
                     }
-                    
-                } else
+
+                }
+                else
                 {
                     data.gridStatus.Remove(key);
                 }
@@ -589,7 +590,23 @@ public class TaskSystem : JobComponentSystem
                     // we're planting here and need to add a plant entity
                     data.gridStatus.Remove(key);
                     float2 trans = new float2(GridData.getRow(key), GridData.getCol(key));
-                    var instance = entityManager.Instantiate(GridDataInitialization.plantEntity);
+                    Entity instance;
+                    if (PlantSystem.freePlants.Count > 0)
+                    {
+                        // this will become the new plant to put it back into use
+                        instance = (Entity)PlantSystem.freePlants.Dequeue();
+                        entityManager.RemoveComponent(instance, typeof(Disabled));
+                    }
+                    else
+                    {
+                        // we really have to instantiate the plant
+                        instance = entityManager.Instantiate(GridDataInitialization.plantEntity);
+                        Rotation rotation = entityManager.GetComponentData<Rotation>(instance);
+                        var newRot = rotation.Value * Quaternion.Euler(0, 0, 90);
+                        entityManager.SetComponentData(instance, new Rotation { Value = newRot });
+
+                    }
+
                     EntityInfo plantInfo = new EntityInfo { type = (int)Tiles.Plant, specificEntity = instance };
                     if (data.gridStatus.TryAdd(key, plantInfo))
                     {
@@ -598,10 +615,7 @@ public class TaskSystem : JobComponentSystem
                         entityManager.SetComponentData(instance, new NonUniformScale { Value = new float3(1.0f, 1.0f, 1.0f) });
                         // for some reason the original plant mesh creation happens on the wrong axis, 
                         // so we have to rotate it 90 degrees
-                        Rotation rotation = entityManager.GetComponentData<Rotation>(instance);
-                        var newRot = rotation.Value * Quaternion.Euler(0, 0, 90);
-                        entityManager.SetComponentData(instance, new Rotation { Value = newRot });
-                        entityManager.SetComponentData(instance, new PlantComponent
+                         entityManager.SetComponentData(instance, new PlantComponent
                         {
                             timeGrown = 0,
                             state = (int)PlantState.Growing,
@@ -618,12 +632,13 @@ public class TaskSystem : JobComponentSystem
                     {
                         data.gridStatus.Remove(key);
                         // set reserve data in plant component for this entity
-                        entityManager.SetComponentData(value.specificEntity,  new PlantComponent {
+                        entityManager.SetComponentData(value.specificEntity, new PlantComponent
+                        {
                             timeGrown = PlantSystem.MAX_GROWTH,
                             state = (int)PlantState.None,
                             reserveIndex = remInfo.requestingEntity.Index,
-                        });                    
-                    } 
+                        });
+                    }
                 }
                 else
                 {

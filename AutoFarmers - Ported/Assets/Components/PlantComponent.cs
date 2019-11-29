@@ -12,5 +12,5 @@ public struct PlantComponent : IComponentData
     public int reserveIndex;
 }
 
-public enum PlantState { None = 0, Growing = 1, Following = 2, Deleted=3 };
+public enum PlantState { None = 0, Growing = 1, Following = 2, Deleted=3, Instantiated=4 };
 

@@ -311,51 +311,13 @@ public class GridData
         }
 
         EntityInfo value;
-        if ((Mathf.Abs(rand.NextInt())%100) > 50)
+        int nextRandom = Mathf.Abs(rand.NextInt()) % 100;
+        if (nextRandom < 50)
         {
-        //Debug.Log("positive search position");
-        for (int i = randStartX; i <= endX; i++)
-        {
-            for (int j = randStartY; j <= endY; j++)
+            //Debug.Log("positive search position");
+            for (int i = randStartX; i <= endX; i++)
             {
-                if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
-                {
-                    if (value.type == statusToFind)
-                    {
-                        return new float2(i, j);
-                    }
-                }
-                else if (statusToFind == 0)
-                {
-                    return new float2(i, j);
-                }
-            }
-        }
-
-        for (int i = startX; i < randStartX; i++)
-        {
-            for (int j = startY; j < randStartY; j++)
-            {
-                if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
-                {
-                    if (value.type == statusToFind)
-                    {
-                        return new float2(i, j);
-                    }
-                }
-                else if (statusToFind == 0)
-                {
-                    return new float2(i, j);
-                }
-            }
-        }
-        }
-        else
-        {
-            //Debug.Log("negative search direction");
-            for (int i = randStartX; i >= startX; i--)
-            {
-                for (int j = randStartY; j >= startY; j--)
+                for (int j = randStartY; j <= endY; j++)
                 {
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
@@ -370,6 +332,28 @@ public class GridData
                     }
                 }
             }
+
+            for (int i = startX; i < randStartX; i++)
+            {
+                for (int j = startY; j < randStartY; j++)
+                {
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (value.type == statusToFind)
+                        {
+                            return new float2(i, j);
+                        }
+                    }
+                    else if (statusToFind == 0)
+                    {
+                        return new float2(i, j);
+                    }
+                }
+            }
+        }
+        else 
+        {
+            //Debug.Log("negative search direction");
             for (int i = endX; i > randStartX; i--)
             {
                 for (int j = endY; j > randStartY; j--)
@@ -387,8 +371,26 @@ public class GridData
                     }
                 }
             }
-        }
-        return new float2(-1, -1);
+            for (int i = randStartX; i >= startX; i--)
+            {
+                for (int j = randStartY; j >= startY; j--)
+                {
+                    if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
+                    {
+                        if (value.type == statusToFind)
+                        {
+                            return new float2(i, j);
+                        }
+                    }
+                    else if (statusToFind == 0)
+                    {
+                        return new float2(i, j);
+                    }
+                }
+            }
+ 
+        }        
+            return new float2(-1, -1);
     }
 
 
@@ -446,7 +448,7 @@ public class GridData
         }
 
         EntityInfo value;
-        if ((Mathf.Abs(rand.NextInt()) % 100) > 50)
+        if ((Mathf.Abs(rand.NextInt()) % 100) < 50)
         {
             //Debug.Log("positive search position");
             for (int i = randStartX; i <= endX; i++)
@@ -496,12 +498,13 @@ public class GridData
                     }
                 }
             }
-        } else
+        }
+        else
         {
             //Debug.Log("positive search position");
-            for (int i = randStartX; i >= startX; i--)
+            for (int i = endX; i > randStartX; i--)
             {
-                for (int j = randStartY; j >= startY; j--)
+                for (int j = endY; j > randStartY; j--)
                 {
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
@@ -523,9 +526,9 @@ public class GridData
                 }
             }
 
-            for (int i = endX; i > randStartX; i--)
+            for (int i = randStartX; i >= startX; i--)
             {
-                for (int j = endY; j > randStartY; j--)
+                for (int j = randStartY; j >= startY; j--)
                 {
                     if (hashMap.TryGetValue(GridData.ConvertToHash(i, j), out value))
                     {
