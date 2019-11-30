@@ -93,7 +93,8 @@ public class PerformTaskSystem : JobComponentSystem
             {
                 case Tiles.Rock:
                     //Debug.Log("destroying rock");
-                    ecb.DestroyEntity(entityInfo.specificEntity.Index, entityInfo.specificEntity);
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entityInfo.specificEntity, type = Tags.Disable });
+                    //ecb.DestroyEntity(entityInfo.specificEntity.Index, entityInfo.specificEntity);
                     addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.NeedsTask });
                     addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.PerformTask });
                     //ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
@@ -144,8 +145,11 @@ public class PerformTaskSystem : JobComponentSystem
                                 farmerToFollow = entity,
                                 reserveIndex = plant.reserveIndex
                             };
-                            setInfo.Enqueue(new ComponentSetInfo { entity = entityInfo.specificEntity,
-                                plantComponent = plantData2 });
+                            setInfo.Enqueue(new ComponentSetInfo
+                            {
+                                entity = entityInfo.specificEntity,
+                                plantComponent = plantData2
+                            });
 
                             //ecb.SetComponent(entityInfo.specificEntity.Index,
                             //     entityInfo.specificEntity, plantData2);
@@ -154,11 +158,12 @@ public class PerformTaskSystem : JobComponentSystem
                         {
                             entityInfo.type = (short)Tiles.None;
                         }
-                    } else
+                    }
+                    else
                     {
                         entityInfo.type = (short)Tiles.None;
                     }
-                    
+
                     //ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
                     //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
                     addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.NeedsTask });

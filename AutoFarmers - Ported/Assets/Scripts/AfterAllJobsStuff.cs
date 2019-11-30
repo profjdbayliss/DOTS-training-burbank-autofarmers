@@ -49,8 +49,7 @@ public class AfterAllJobsStuff : ComponentSystem
         entityManager.CompleteAllJobs();
 
         // now do special stuff that can't be done in parallel!
-
-
+        
         //
         // component buffer stuff that should eventually be parallel and in burst
         // and thus deleted from being here because it causes errors if it's not here
