@@ -14,12 +14,20 @@ public class PlantSystem : JobComponentSystem
     private float deltaTime;
     public static NativeQueue<Entity> freePlants;
     public static NativeQueue<Entity> plantCreationDeletionInfo;
+    public static NativeQueue<ComponentTransInfo> componentSetInfo;
+
+    public struct ComponentTransInfo
+    {
+        public Entity entity;
+        public float3 trans;
+    }
 
     protected override void OnCreate()
     {
         ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
         freePlants = new NativeQueue<Entity>(Allocator.Persistent);
         plantCreationDeletionInfo = new NativeQueue<Entity>(Allocator.Persistent);
+        componentSetInfo = new NativeQueue<ComponentTransInfo>(Allocator.Persistent);
     }
 
     protected override void OnDestroy()
@@ -31,6 +39,10 @@ public class PlantSystem : JobComponentSystem
         if (plantCreationDeletionInfo.IsCreated)
         {
             plantCreationDeletionInfo.Dispose();
+        }
+        if (componentSetInfo.IsCreated)
+        {
+            componentSetInfo.Dispose();
         }
         base.OnDestroy();
     }
@@ -44,6 +56,7 @@ public class PlantSystem : JobComponentSystem
         [ReadOnly] public float maxGrowth;
         public EntityCommandBuffer.Concurrent ecb;
         public NativeQueue<Entity>.ParallelWriter plantChanges;
+        public NativeQueue<ComponentTransInfo>.ParallelWriter setInfo;
 
         public void Execute(Entity entity, int index,
             ref PlantComponent plantComponent,
@@ -62,7 +75,7 @@ public class PlantSystem : JobComponentSystem
                     if (currentTotalTime < maxGrowth)
                     {
                         float currentScale = currentTotalTime / 10.0f;
-                        ecb.SetComponent(index, entity, new NonUniformScale { Value = new float3(currentScale, 1.0f, currentScale) });
+                        scale = new NonUniformScale { Value = new float3(currentScale, 1.0f, currentScale) };
                         var data = new PlantComponent
                         {
                             timeGrown = currentTotalTime,
@@ -82,7 +95,11 @@ public class PlantSystem : JobComponentSystem
                     break;
                 case PlantState.Following:
                     float3 pos = translations[plantComponent.farmerToFollow].Value;
-                    ecb.SetComponent(index, entity, new Translation { Value = new float3(pos.x, pos.y + 2, pos.z) });
+                    float3 trans = new float3(pos.x, pos.y + 2, pos.z);
+                    setInfo.Enqueue(new ComponentTransInfo {entity = entity,
+                        trans = trans 
+                    });
+                    //ecb.SetComponent(index, entity, new Translation { Value = new float3(pos.x, pos.y + 2, pos.z) });
 
                     break;
                 case PlantState.Deleted:
@@ -112,6 +129,7 @@ public class PlantSystem : JobComponentSystem
         job.maxGrowth = MAX_GROWTH;
         job.plantChanges = plantCreationDeletionInfo.AsParallelWriter();
         job.translations = GetComponentDataFromEntity<Translation>(true);
+        job.setInfo = componentSetInfo.AsParallelWriter();
         JobHandle jobHandle = job.Schedule(this, inputDependencies);
         ecbs.AddJobHandleForProducer(jobHandle);
         //jobHandle.Complete();

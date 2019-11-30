@@ -4,14 +4,39 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 using Unity.Transforms;
+using Unity.Collections;
+
+public struct TagInfo
+{
+    public Entity entity;
+    public int shouldRemove;
+    public Tags type;
+}
+
+public enum Tags { Moving = 0, NeedsTask = 1, PerformTask=2 };
+
+public struct ComponentSetInfo
+{
+    public Entity entity;
+    public PlantComponent plantComponent;
+}
 
 public class AfterAllJobsStuff : ComponentSystem
 {
     private static Unity.Mathematics.Random rand;
 
+
+    
     protected override void OnCreate()
     {
         rand = new Unity.Mathematics.Random(42);
+    }
+
+    protected override void OnDestroy()
+    {
+      
+        base.OnDestroy();
+
     }
 
     protected override void OnUpdate()
@@ -21,6 +46,169 @@ public class AfterAllJobsStuff : ComponentSystem
 
         // now do special stuff that can't be done in parallel!
 
+
+        //
+        // component buffer stuff that should eventually be parallel and in burst
+        // and thus deleted from being here because it causes errors if it's not here
+        //
+        // right now the things that don't work for command buffers are:
+        // setComponent, addComponent, removeComponent
+        // so many tags can't be changed unless we're adding/removing them here
+
+        // Drone Task System:
+        while (DroneTaskSystem.addRemoveTags.Count > 0)
+        {
+            TagInfo tagInfo = DroneTaskSystem.addRemoveTags.Dequeue();
+            if (tagInfo.shouldRemove == 1)
+            {
+                if (tagInfo.type == Tags.NeedsTask)
+                {
+                    entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                }
+                else if (tagInfo.type == Tags.Moving)
+                {
+                    entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
+                }
+            }
+            else
+            {
+                if (tagInfo.type == Tags.NeedsTask)
+                {
+                    entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                }
+                else if (tagInfo.type == Tags.Moving)
+                {
+                    entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
+                }
+            }
+        }
+
+        while (DroneTaskSystem.componentSetInfo.Count > 0)
+        {
+            ComponentSetInfo setInfo = DroneTaskSystem.componentSetInfo.Dequeue();
+            entityManager.SetComponentData(setInfo.entity, setInfo.plantComponent);
+        }
+
+        // farmer Task System:
+        while (FarmerTaskSystem.addRemoveTags.Count > 0)
+        {
+            TagInfo tagInfo = FarmerTaskSystem.addRemoveTags.Dequeue();
+            if (tagInfo.shouldRemove == 1)
+            {
+                if (tagInfo.type == Tags.NeedsTask)
+                {
+                    entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                }
+                else if (tagInfo.type == Tags.Moving)
+                {
+                    entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
+                }
+            }
+            else
+            {
+                if (tagInfo.type == Tags.NeedsTask)
+                {
+                    entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                }
+                else if (tagInfo.type == Tags.Moving)
+                {
+                    entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
+                }
+            }
+        }
+
+        while (FarmerTaskSystem.componentSetInfo.Count > 0)
+        {
+            ComponentSetInfo setInfo = FarmerTaskSystem.componentSetInfo.Dequeue();
+            entityManager.SetComponentData(setInfo.entity, setInfo.plantComponent);
+        }
+
+        // movement system:
+        while (MovementSystem.addRemoveTags.Count > 0)
+        {
+            TagInfo tagInfo = MovementSystem.addRemoveTags.Dequeue();
+            if (tagInfo.shouldRemove == 1)
+            {
+                if (tagInfo.type == Tags.NeedsTask)
+                {
+                    entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                }
+                else if (tagInfo.type == Tags.Moving)
+                {
+                    entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
+                } else if (tagInfo.type == Tags.PerformTask)
+                {
+                    entityManager.RemoveComponent(tagInfo.entity, typeof(PerformTaskTag));
+                }
+            }
+            else
+            {
+                if (tagInfo.type == Tags.NeedsTask)
+                {
+                    entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                }
+                else if (tagInfo.type == Tags.Moving)
+                {
+                    entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
+                }
+                else if (tagInfo.type == Tags.PerformTask)
+                {
+                    entityManager.AddComponent(tagInfo.entity, typeof(PerformTaskTag));
+                }
+            }
+        }
+
+        // perform tasks system:
+        while (PerformTaskSystem.addRemoveTags.Count > 0)
+        {
+            TagInfo tagInfo = PerformTaskSystem.addRemoveTags.Dequeue();
+            if (tagInfo.shouldRemove == 1)
+            {
+                if (tagInfo.type == Tags.NeedsTask)
+                {
+                    entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                }
+                else if (tagInfo.type == Tags.Moving)
+                {
+                    entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
+                }
+                else if (tagInfo.type == Tags.PerformTask)
+                {
+                    entityManager.RemoveComponent(tagInfo.entity, typeof(PerformTaskTag));
+                }
+            }
+            else
+            {
+                if (tagInfo.type == Tags.NeedsTask)
+                {
+                    entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                }
+                else if (tagInfo.type == Tags.Moving)
+                {
+                    entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
+                }
+                else if (tagInfo.type == Tags.PerformTask)
+                {
+                    entityManager.AddComponent(tagInfo.entity, typeof(PerformTaskTag));
+                }
+            }
+        }
+
+        while (PerformTaskSystem.componentSetInfo.Count > 0)
+        {
+            ComponentSetInfo setInfo = PerformTaskSystem.componentSetInfo.Dequeue();
+            entityManager.SetComponentData(setInfo.entity, setInfo.plantComponent);
+        }
+
+        // Plant system:
+        while (PlantSystem.componentSetInfo.Count > 0)
+        {
+            PlantSystem.ComponentTransInfo setInfo = PlantSystem.componentSetInfo.Dequeue();
+            Translation trans = new Translation { Value = setInfo.trans };
+            entityManager.SetComponentData(setInfo.entity, trans);
+        }
+
+        //=============================================
         //
         // PLANT SYSTEM
         //

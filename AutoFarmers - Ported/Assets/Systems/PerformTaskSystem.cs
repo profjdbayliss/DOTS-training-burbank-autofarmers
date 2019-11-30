@@ -15,12 +15,17 @@ public class PerformTaskSystem : JobComponentSystem
     public static NativeQueue<float2> tillChanges;
     public static Store storeInfo;
     public static NativeArray<int> plantsSold;
+    public static NativeQueue<TagInfo> addRemoveTags;
+    public static NativeQueue<ComponentSetInfo> componentSetInfo;
 
     protected override void OnCreate()
     {
         ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
         plantsSold = new NativeArray<int>(1, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+        addRemoveTags = new NativeQueue<TagInfo>(Allocator.Persistent);
+        componentSetInfo = new NativeQueue<ComponentSetInfo>(Allocator.Persistent);
     }
+
 
     public static void InitializeTillSystem(int maxFarmers)
     {
@@ -46,6 +51,17 @@ public class PerformTaskSystem : JobComponentSystem
         {
             plantsSold.Dispose();
         }
+        if (addRemoveTags.IsCreated)
+        {
+            addRemoveTags.Dispose();
+        }
+
+        if (componentSetInfo.IsCreated)
+        {
+            componentSetInfo.Dispose();
+        }
+
+        base.OnDestroy();
     }
 
     [RequireComponentTag(typeof(PerformTaskTag))]
@@ -61,10 +77,13 @@ public class PerformTaskSystem : JobComponentSystem
 
         // var's used by harvest
         [ReadOnly] public ComponentDataFromEntity<PlantComponent> plantInfo;
+        [ReadOnly] public float plantGrowthMax;
 
         // var used by store:
         public NativeArray<int> plantsSold;
         //[ReadOnly] public ComponentDataFromEntity<Translation> translations;
+        public NativeQueue<TagInfo>.ParallelWriter addRemoveTags;
+        public NativeQueue<ComponentSetInfo>.ParallelWriter setInfo;
 
         public void Execute(Entity entity, int index, [ReadOnly] ref Translation translation, ref EntityInfo entityInfo)
         {
@@ -75,8 +94,10 @@ public class PerformTaskSystem : JobComponentSystem
                 case Tiles.Rock:
                     //Debug.Log("destroying rock");
                     ecb.DestroyEntity(entityInfo.specificEntity.Index, entityInfo.specificEntity);
-                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
-                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.NeedsTask });
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.PerformTask });
+                    //ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
                     break;
                 case Tiles.Till:
                     float tillBlockHeight = 0.25f;
@@ -89,15 +110,20 @@ public class PerformTaskSystem : JobComponentSystem
 
                         changes.Enqueue(new float2((int)pos.x, (int)pos.z));
                     }
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.NeedsTask });
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.PerformTask });
 
-                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                    //ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
                     break;
                 case Tiles.Plant:
                     // since the plant needs to be instantiated and then cached
                     // into the hash table it's done in the main thread
-                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                    //ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.NeedsTask });
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.PerformTask });
+
                     break;
                 case Tiles.Harvest:
                     EntityInfo harvestInfo = new EntityInfo { type = (int)Tiles.Till };
@@ -113,13 +139,16 @@ public class PerformTaskSystem : JobComponentSystem
 
                             PlantComponent plantData2 = new PlantComponent
                             {
-                                timeGrown = PlantSystem.MAX_GROWTH,
+                                timeGrown = plantGrowthMax,
                                 state = (int)PlantState.Following,
                                 farmerToFollow = entity,
                                 reserveIndex = plant.reserveIndex
                             };
-                            ecb.SetComponent(entityInfo.specificEntity.Index,
-                                 entityInfo.specificEntity, plantData2);
+                            setInfo.Enqueue(new ComponentSetInfo { entity = entityInfo.specificEntity,
+                                plantComponent = plantData2 });
+
+                            //ecb.SetComponent(entityInfo.specificEntity.Index,
+                            //     entityInfo.specificEntity, plantData2);
                         }
                         else if (plant.reserveIndex != entity.Index)
                         {
@@ -130,8 +159,11 @@ public class PerformTaskSystem : JobComponentSystem
                         entityInfo.type = (short)Tiles.None;
                     }
                     
-                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
-                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                    //ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.NeedsTask });
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.PerformTask });
+
                     break;
                 case Tiles.Store:
                     // since multiple entities can try to delete this one
@@ -141,14 +173,22 @@ public class PerformTaskSystem : JobComponentSystem
                     // we need to remove the plant from the farmer
                     PlantComponent plantData = new PlantComponent
                     {
-                        timeGrown = PlantSystem.MAX_GROWTH,
+                        timeGrown = plantGrowthMax,
                         state = (int)PlantState.Deleted
                     };
-                    ecb.SetComponent(entityInfo.specificEntity.Index,
-                         entityInfo.specificEntity, plantData);
+                    //ecb.SetComponent(entityInfo.specificEntity.Index,
+                    //     entityInfo.specificEntity, plantData);
+                    setInfo.Enqueue(new ComponentSetInfo
+                    {
+                        entity = entityInfo.specificEntity,
+                        plantComponent = plantData
+                    });
+
                     //}
-                    ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
-                    ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                    //ecb.RemoveComponent(index, entity, typeof(PerformTaskTag));
+                    //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.NeedsTask });
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.PerformTask });
 
                     // and should actually sell stuff here
                     unsafe
@@ -176,6 +216,9 @@ public class PerformTaskSystem : JobComponentSystem
         job.plantsSold = plantsSold;
         //job.translations = GetComponentDataFromEntity<Translation>(true);
         job.plantInfo = GetComponentDataFromEntity<PlantComponent>(true);
+        job.addRemoveTags = addRemoveTags.AsParallelWriter();
+        job.setInfo = componentSetInfo.AsParallelWriter();
+        job.plantGrowthMax = PlantSystem.MAX_GROWTH;
         JobHandle jobHandle = job.Schedule(this, inputDependencies);
         ecbs.AddJobHandleForProducer(jobHandle);
         //jobHandle.Complete();

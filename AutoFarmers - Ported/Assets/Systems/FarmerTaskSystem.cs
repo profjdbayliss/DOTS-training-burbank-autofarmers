@@ -1,27 +1,27 @@
-using System.Threading;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
-using static Movement;
-using static Unity.Mathematics.math;
 
 public class FarmerTaskSystem : JobComponentSystem
 {
     public EntityCommandBufferSystem ecbs;
     public NativeArray<int> randomValues;
     public Unity.Mathematics.Random rand;
-    const int RANDOM_SIZE = 256;
+    const int RANDOM_SIZE = 1024;
     public static NativeQueue<RemovalInfo> hashRemovalsFarmer;
+    public static NativeQueue<ComponentSetInfo> componentSetInfo;
+    public static NativeQueue<TagInfo> addRemoveTags;
 
     public struct RemovalInfo
     {
         public int key;
         public Entity requestingEntity;
     }
+
+    
 
     protected override void OnCreate()
     {
@@ -33,6 +33,9 @@ public class FarmerTaskSystem : JobComponentSystem
             randomValues[i] = System.Math.Abs(rand.NextInt());
         }
         hashRemovalsFarmer = new NativeQueue<RemovalInfo>(Allocator.Persistent);
+        componentSetInfo = new NativeQueue<ComponentSetInfo>(Allocator.Persistent);
+        addRemoveTags = new NativeQueue<TagInfo>(Allocator.Persistent);
+
     }
 
 
@@ -47,6 +50,14 @@ public class FarmerTaskSystem : JobComponentSystem
         {
             randomValues.Dispose();
         }
+        if (componentSetInfo.IsCreated)
+        {
+            componentSetInfo.Dispose();
+        }
+        if (addRemoveTags.IsCreated)
+        {
+            addRemoveTags.Dispose();
+        }
         base.OnDestroy();
 
     }
@@ -56,7 +67,7 @@ public class FarmerTaskSystem : JobComponentSystem
     [RequireComponentTag(typeof(NeedsTaskTag), typeof(FarmerTag))]
     struct FarmerTaskSystemJob : IJobForEachWithEntity<Translation, MovementComponent, EntityInfo>
     {
-        public EntityCommandBuffer.Concurrent ecb;
+        //public EntityCommandBuffer.Concurrent ecb;
         [ReadOnly] public NativeHashMap<int, EntityInfo> gridHashMap;
         [ReadOnly] public NativeArray<int> randArray;
         [ReadOnly] public int nextIndex;
@@ -67,6 +78,8 @@ public class FarmerTaskSystem : JobComponentSystem
         [ReadOnly] public float plantGrowthMax;
         // var for tilling
         public NativeQueue<RemovalInfo>.ParallelWriter removals;
+        public NativeQueue<TagInfo>.ParallelWriter addRemoveTags;
+        public NativeQueue<ComponentSetInfo>.ParallelWriter setInfo;
 
         // randomly determines a task and then finds the right tiles that
         // will help the task occur
@@ -78,7 +91,8 @@ public class FarmerTaskSystem : JobComponentSystem
             // determine what the task for this entity is
             //
 
-            taskValue = (Tiles)(randArray[(nextIndex + index) % randArray.Length] % 4) + 1;
+            taskValue = (Tiles)(randArray[(nextIndex + entity.Index) % randArray.Length] % 4) + 1;
+            nextIndex++;
 
             if (entityIntent.type == (int)Tiles.Harvest)
             {
@@ -95,42 +109,69 @@ public class FarmerTaskSystem : JobComponentSystem
             switch (taskValue)
             {
                 case Tiles.Rock:
-                    foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, (int)taskValue, gridSize, gridSize);
+                    foundLocation = GridData.Search(randArray, nextIndex, gridHashMap, pos, radiusForSearch, (int)taskValue, gridSize, gridSize);
+                    nextIndex++;
                     break;
                 case Tiles.Till:
                     // default is currently Till
-                    Unity.Mathematics.Random rand;
-                    if ((uint)nextIndex == 0)
-                    {
-                        rand = new Unity.Mathematics.Random(10);
-                    }
-                    else
-                    {
-                        rand = new Unity.Mathematics.Random((uint)nextIndex);
-                    }
+                    //Unity.Mathematics.Random rand;
+                    //if ((uint)nextIndex == 0)
+                    //{
+                    //    rand = new Unity.Mathematics.Random(10);
+                    //}
+                    //else
+                    //{
+                    //    rand = new Unity.Mathematics.Random((uint)nextIndex);
+                    //}
 
                     // we look for a default spot to put a tilled thing
-                    float2 nextPos = new float2(Mathf.Abs(rand.NextInt()) % gridSize, Mathf.Abs(rand.NextInt()) % gridSize);
-                    foundLocation = GridData.Search(gridHashMap, nextPos, radiusForSearch, 0, gridSize, gridSize);
+                    //int randX = randArray[(nextIndex + entity.Index) % randArray.Length];
+                    //nextIndex++;
+                    //int randZ = randArray[(nextIndex + entity.Index) % randArray.Length];
+                    //nextIndex++;
+                    //float2 nextPos = new float2(randX % gridSize, randZ % gridSize);
+                    //foundLocation = GridData.Search(gridHashMap, nextPos, radiusForSearch, 0, gridSize, gridSize);
+                    foundLocation = GridData.Search(randArray, nextIndex, gridHashMap, pos, radiusForSearch, 0, gridSize, gridSize);
+                    nextIndex++;
+                    if (foundLocation.x == -1)
+                    {
+                        foundLocation = GridData.Search(randArray, nextIndex, gridHashMap, pos, radiusForSearch*3, 0, gridSize, gridSize);
+                        nextIndex++;
+                    }
                     break;
                 case Tiles.Plant:
                     // need to search for tilled soil
-                    foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, (int)Tiles.Till, gridSize, gridSize);
+                    foundLocation = GridData.Search(randArray, nextIndex, gridHashMap, pos, radiusForSearch, (int)Tiles.Till, gridSize, gridSize);
+                    nextIndex++;
+                    if (foundLocation.x == -1)
+                    {
+                        foundLocation = GridData.Search(randArray, nextIndex, gridHashMap, pos, radiusForSearch*3, (int)Tiles.Till, gridSize, gridSize);
+                        nextIndex++;
+                    }
                     break;
                 case Tiles.Harvest:
                     // searches for the plants to go harvest them 
                     foundLocation =
-                        GridData.FindMaturePlant(gridHashMap, pos, radiusForSearch, (int)Tiles.Plant, gridSize, gridSize,
+                        GridData.FindMaturePlant(randArray, nextIndex, gridHashMap, pos, radiusForSearch, (int)Tiles.Plant, gridSize, gridSize,
                         ref IsPlantType, plantGrowthMax);
+                    nextIndex++;
+                    if (foundLocation.x == -1)
+                    {
+                        foundLocation = GridData.FindMaturePlant(randArray, nextIndex, gridHashMap, pos, radiusForSearch*3, (int)Tiles.Plant, gridSize, gridSize,
+                        ref IsPlantType, plantGrowthMax);
+                        nextIndex++;
+                    }
                     break;
                 default:
                     // searches for the stores to go and sell a plant 
-                    foundLocation = GridData.Search(gridHashMap, pos, radiusForSearch, (int)Tiles.Store, gridSize, gridSize);
+                    foundLocation = GridData.Search(randArray, nextIndex, gridHashMap, pos, radiusForSearch, (int)Tiles.Store, gridSize, gridSize);
+                    nextIndex++;
                     // no store close by
                     if (foundLocation.x == -1)
                     {
                         // need to find somewhere to get rid of the plant
-                        foundLocation = GridData.Search(gridHashMap, pos, gridSize, (int)Tiles.Store, gridSize, gridSize);
+                        foundLocation = GridData.Search(randArray, nextIndex, gridHashMap, pos, gridSize, (int)Tiles.Store, gridSize, gridSize);
+                        nextIndex++;
                     }
                     break;
             }
@@ -144,7 +185,7 @@ public class FarmerTaskSystem : JobComponentSystem
             //
             if (foundLocation.x != -1 && foundLocation.y != -1)
             {
-                float2 findMiddle = MovementJob.FindMiddlePos(pos, foundLocation);
+                float2 findMiddle = MovementSystem.FindMiddlePos(pos, foundLocation);
                 var rockPos = GridData.FindTheRock(gridHashMap, pos, findMiddle, foundLocation, gridSize, gridSize);
                 //Debug.Log(index + " Start: " + pos.x + " " + pos.y + " middle : " + findMiddle.x + " " + findMiddle.y + " target pos : " +
                 //    foundLocation.x + " " + foundLocation.y + " " + rockPos + " intention: " + taskValue);
@@ -155,7 +196,7 @@ public class FarmerTaskSystem : JobComponentSystem
                     // otherwise re-find the middle
                     if ((int)rockPos.x == (int)pos.x || (int)rockPos.y == (int)pos.y)
                     {
-                        findMiddle = MovementJob.FindMiddlePos(pos, rockPos);
+                        findMiddle = MovementSystem.FindMiddlePos(pos, rockPos);
                     }
                     //Debug.Log("Updated rock position to: " + rockPos + "Actor is now chasing a rock");
 
@@ -178,10 +219,11 @@ public class FarmerTaskSystem : JobComponentSystem
                         //UnityEngine.Debug.Log("plant should be destroyed on farmer");
                         PlantComponent plantInfo = new PlantComponent
                         {
-                            timeGrown = PlantSystem.MAX_GROWTH,
+                            timeGrown = plantGrowthMax,
                             state = (int)PlantState.Deleted,
                         };
-                        ecb.SetComponent(entityIntent.specificEntity.Index, entityIntent.specificEntity, plantInfo);
+                        setInfo.Enqueue(new ComponentSetInfo {entity = entityIntent.specificEntity, plantComponent=plantInfo });
+                        //ecb.SetComponent(entityIntent.specificEntity.Index, entityIntent.specificEntity, plantInfo);
                     }
 
                     // get the index into the array of rocks so that we can find it
@@ -190,8 +232,10 @@ public class FarmerTaskSystem : JobComponentSystem
                     entityIntent = fullRockData;
                     //ecb.SetComponent(index, entity, fullRockData);
                     //Debug.Log("rock task happening : " + rockEntityIndex + " " + tmp.Index);
-                    ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
-                    ecb.AddComponent(index, entity, typeof(MovingTag));
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.NeedsTask });
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.Moving });
+                    //ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
+                    //ecb.AddComponent(index, entity, typeof(MovingTag));
                     int key = GridData.ConvertToHash((int)rockPos.x, (int)rockPos.y);
                     removals.Enqueue(new RemovalInfo { key = key, requestingEntity = entity });
                 }
@@ -210,8 +254,10 @@ public class FarmerTaskSystem : JobComponentSystem
                     //Debug.Log("doing a task and about to move: " + pos.x + " " + pos.y +
                     //    " target is : " + data.targetPos.x + " " + data.targetPos.y);
                     //Debug.Log("rock value: " + rockPos);
-                    ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
-                    ecb.AddComponent(index, entity, typeof(MovingTag));
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.NeedsTask });
+                    addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.Moving });
+                    //ecb.RemoveComponent(index, entity, typeof(NeedsTaskTag));
+                    //ecb.AddComponent(index, entity, typeof(MovingTag));
                     int key;
 
                     switch (taskValue)
@@ -255,8 +301,10 @@ public class FarmerTaskSystem : JobComponentSystem
                             else
                             {
                                 // not ready to harvest, try something else
-                                ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                                ecb.RemoveComponent(index, entity, typeof(MovingTag));
+                                addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.NeedsTask });
+                                addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.Moving });
+                                //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
+                                //ecb.RemoveComponent(index, entity, typeof(MovingTag));
                             }
                             break;
                         case Tiles.Store:
@@ -292,13 +340,14 @@ public class FarmerTaskSystem : JobComponentSystem
         job.gridHashMap = data.gridStatus;
         job.randArray = randomValues;
         job.nextIndex = index;
-        job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
+        //job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.gridSize = data.width;
-        job.radiusForSearch = 15;
+        job.radiusForSearch = data.width/6;
         job.removals = hashRemovalsFarmer.AsParallelWriter();
         job.IsPlantType = GetComponentDataFromEntity<PlantComponent>(true);
         job.plantGrowthMax = PlantSystem.MAX_GROWTH;
-
+        job.addRemoveTags = addRemoveTags.AsParallelWriter();
+        job.setInfo = componentSetInfo.AsParallelWriter();
         var jobHandle = job.Schedule(this, inputDependencies);
         ecbs.AddJobHandleForProducer(jobHandle);
 
