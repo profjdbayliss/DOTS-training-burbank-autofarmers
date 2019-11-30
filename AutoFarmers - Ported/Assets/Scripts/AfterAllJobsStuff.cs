@@ -13,7 +13,7 @@ public struct TagInfo
     public Tags type;
 }
 
-public enum Tags { Moving = 0, NeedsTask = 1, PerformTask=2 };
+public enum Tags { Moving = 0, NeedsTask = 1, PerformTask = 2, Disable = 3 };
 
 public struct ComponentSetInfo
 {
@@ -24,9 +24,8 @@ public struct ComponentSetInfo
 public class AfterAllJobsStuff : ComponentSystem
 {
     private static Unity.Mathematics.Random rand;
+    public static NativeArray<float2>[] allUVs;
 
-
-    
     protected override void OnCreate()
     {
         rand = new Unity.Mathematics.Random(42);
@@ -34,7 +33,12 @@ public class AfterAllJobsStuff : ComponentSystem
 
     protected override void OnDestroy()
     {
-      
+        for (int i = 0; i < allUVs.Length; i++)
+        {
+            if (allUVs[i].IsCreated)
+                allUVs[i].Dispose();
+        }
+
         base.OnDestroy();
 
     }
@@ -136,7 +140,8 @@ public class AfterAllJobsStuff : ComponentSystem
                 else if (tagInfo.type == Tags.Moving)
                 {
                     entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
-                } else if (tagInfo.type == Tags.PerformTask)
+                }
+                else if (tagInfo.type == Tags.PerformTask)
                 {
                     entityManager.RemoveComponent(tagInfo.entity, typeof(PerformTaskTag));
                 }
@@ -176,6 +181,10 @@ public class AfterAllJobsStuff : ComponentSystem
                 {
                     entityManager.RemoveComponent(tagInfo.entity, typeof(PerformTaskTag));
                 }
+                else if (tagInfo.type == Tags.Disable)
+                {
+                    entityManager.RemoveComponent(tagInfo.entity, typeof(Disabled));
+                }
             }
             else
             {
@@ -190,6 +199,10 @@ public class AfterAllJobsStuff : ComponentSystem
                 else if (tagInfo.type == Tags.PerformTask)
                 {
                     entityManager.AddComponent(tagInfo.entity, typeof(PerformTaskTag));
+                }
+                else if (tagInfo.type == Tags.Disable)
+                {
+                    entityManager.AddComponent(tagInfo.entity, typeof(Disabled));
                 }
             }
         }
@@ -238,7 +251,9 @@ public class AfterAllJobsStuff : ComponentSystem
                 int width = GridDataInitialization.getMeshWidth(tmp, (int)pos.x,
                     (int)pos.y, GridDataInitialization.BoardWidth);
 
-                Vector2[] uv = tmp.uv;
+                NativeArray<float2> uvs = GridDataInitialization.getUVs((int)pos.x, (int)pos.y,
+                    GridDataInitialization.BoardWidth);
+
                 TextureUV tex = GridDataInitialization.textures[(int)GridDataInitialization.BoardTypes.TilledDirt];
                 int uvStartIndex = (GridDataInitialization.getPosForMesh((int)pos.y) +
                     width *
@@ -246,15 +261,19 @@ public class AfterAllJobsStuff : ComponentSystem
                 //Debug.Log("changing uv at! " + pos + " " + width + " " + uvStartIndex + " " + GridDataInitialization.getPosForMesh((int)pos.x) +
                 //    " " + GridDataInitialization.getPosForMesh((int)pos.y) + "array length: " + uv.Length);
 
-                uv[uvStartIndex] = new float2(tex.pixelStartX,
+                uvs[uvStartIndex] = new float2(tex.pixelStartX,
                     tex.pixelStartY);
-                uv[uvStartIndex + 1] = new float2(tex.pixelStartX,
+                //changeTexture(ref tmp.uv[uvStartIndex], tex.pixelStartX, tex.pixelStartY);
+                //changeTexture(ref tmp.uv[uvStartIndex+1], tex.pixelStartX, tex.pixelEndY);
+                //changeTexture(ref tmp.uv[uvStartIndex+2], tex.pixelEndX, tex.pixelEndY);
+                //changeTexture(ref tmp.uv[uvStartIndex+3], tex.pixelEndX, tex.pixelStartY);
+                uvs[uvStartIndex + 1] = new float2(tex.pixelStartX,
                     tex.pixelEndY);
-                uv[uvStartIndex + 2] = new float2(tex.pixelEndX,
+                uvs[uvStartIndex + 2] = new float2(tex.pixelEndX,
                     tex.pixelEndY);
-                uv[uvStartIndex + 3] = new float2(tex.pixelEndX,
+                uvs[uvStartIndex + 3] = new float2(tex.pixelEndX,
                     tex.pixelStartY);
-                tmp.SetUVs(0, uv);
+                tmp.SetUVs(0, uvs);
                 tmp.MarkModified();
             }
         }
@@ -438,5 +457,11 @@ public class AfterAllJobsStuff : ComponentSystem
 
         }
 
+    }
+
+    public static void changeTexture(ref Vector2 value, float x, float y)
+    {
+        value.x = x;
+        value.y = y;
     }
 }

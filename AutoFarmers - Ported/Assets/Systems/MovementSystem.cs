@@ -107,9 +107,7 @@ public class MovementSystem : JobComponentSystem
                     if ((int)actor.middlePos.x != -1 && (int)actor.middlePos.y != -1)
                     {
                         // we just hit the middle pos and so set things to go to target now
-                        var data = new MovementComponent { startPos = actor.startPos, speed = actor.speed,
-                            targetPos = actor.targetPos, middlePos = new float2(-1, -1) };
-                        actor = data;
+                        actor.middlePos = new float2(-1, -1);
                     }
                     else if (intent.type == (int)Tiles.Rock || intent.type == (int)Tiles.Till ||
                         intent.type == (int)Tiles.Plant || intent.type == (int)Tiles.Harvest ||
@@ -174,14 +172,7 @@ public class MovementSystem : JobComponentSystem
                     {
                         //Debug.Log("just got to the middle" + actor.middlePos);
                         // we just hit the middle pos and so set things to go to target now
-                        var data = new MovementComponent
-                        {
-                            startPos = actor.startPos,
-                            speed = actor.speed,
-                            targetPos = actor.targetPos,
-                            middlePos = new float2(-1, -1),
-                        };
-                        actor = data;
+                        actor.middlePos = new float2(-1, -1);
                     }
                     else if (intent.type == (int)Tiles.Rock || intent.type == (int)Tiles.Till ||
                         intent.type == (int)Tiles.Plant || intent.type == (int)Tiles.Harvest ||
@@ -235,14 +226,10 @@ public class MovementSystem : JobComponentSystem
     {
         var job = new MovementJob();
 
-        // Assign values to the fields on your job here, so that it has
-        // everything it needs to do its work when it runs later.
-        // For example,
         job.deltaTime = Time.deltaTime;
         job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.addRemoveTags = addRemoveTags.AsParallelWriter();
 
-        // Now that the job is set up, schedule it to be run. 
         return job.Schedule(this, inputDependencies);
     }
 }

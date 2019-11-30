@@ -63,6 +63,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     //  renderer info
     public static int MATERIAL_NUMBER = 1;
     public static Mesh[] allMeshes;
+    
 
     // Board rendering variables
     private NativeArray<int> blockIndices; // stores which uv's are used per block
@@ -148,6 +149,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         int maxZ = BoardWidth / MAX_MESH_WIDTH;
         // only one mesh
         allMeshes = new Mesh[(maxX + 1) * (maxZ + 1)];
+        AfterAllJobsStuff.allUVs = new NativeArray<float2>[(maxX + 1) * (maxZ + 1)];
 
         // for small enough meshes it's just a single mesh in the world
         int height = 0;
@@ -155,7 +157,8 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         {
             int cornerX = 0;
             int cornerZ = 0;
-            mesh2 = GenerateTerrainMesh(BoardWidth, BoardWidth, 0, 0, height);
+            AfterAllJobsStuff.allUVs[0] = new NativeArray<float2>(BoardWidth * BoardWidth * 4, Allocator.Persistent);
+            mesh2 = GenerateTerrainMesh(BoardWidth, BoardWidth, 0, 0, height, AfterAllJobsStuff.allUVs[0]);
 
             mesh = Instantiate(mesh2);
             allMeshes[0] = mesh;
@@ -203,7 +206,10 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
 
                     if (x < maxX && z < maxZ)
                     {
-                        mesh2 = GenerateTerrainMesh(MAX_MESH_WIDTH, MAX_MESH_WIDTH, cornerX, cornerZ, height);
+                        AfterAllJobsStuff.allUVs[z + (maxX + 1) * x] = 
+                            new NativeArray<float2>(MAX_MESH_WIDTH *MAX_MESH_WIDTH * 4, Allocator.Persistent);
+                        mesh2 = GenerateTerrainMesh(MAX_MESH_WIDTH, MAX_MESH_WIDTH, cornerX, cornerZ, height,
+                            AfterAllJobsStuff.allUVs[z + (maxX + 1) * x]);
                         aabb = new AABB
                         {
                             Center = pos,
@@ -213,7 +219,10 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
                     }
                     else if (x < maxX)
                     {
-                        mesh2 = GenerateTerrainMesh(MAX_MESH_WIDTH, BoardWidth - cornerZ, cornerX, cornerZ, height);
+                        AfterAllJobsStuff.allUVs[z + (maxX + 1) * x] =
+                           new NativeArray<float2>(MAX_MESH_WIDTH* (BoardWidth - cornerZ) * 4, Allocator.Persistent);
+                        mesh2 = GenerateTerrainMesh(MAX_MESH_WIDTH, BoardWidth - cornerZ, cornerX, cornerZ, height,
+                            AfterAllJobsStuff.allUVs[z + (maxX + 1) * x]);
                         aabb = new AABB
                         {
                             Center = pos,
@@ -223,7 +232,10 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
                     }
                     else if (z < maxZ)
                     {
-                        mesh2 = GenerateTerrainMesh(BoardWidth - cornerX, MAX_MESH_WIDTH, cornerX, cornerZ, height);
+                        AfterAllJobsStuff.allUVs[z + (maxX + 1) * x] =
+                           new NativeArray<float2>((BoardWidth - cornerX)* MAX_MESH_WIDTH * 4, Allocator.Persistent);
+                        mesh2 = GenerateTerrainMesh(BoardWidth - cornerX, MAX_MESH_WIDTH, cornerX, cornerZ, height,
+                            AfterAllJobsStuff.allUVs[z + (maxX + 1) * x]);
                         aabb = new AABB
                         {
                             Center = pos,
@@ -233,7 +245,10 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
                     }
                     else
                     {
-                        mesh2 = GenerateTerrainMesh(BoardWidth - cornerX, BoardWidth - cornerZ, cornerX, cornerZ, height);
+                        AfterAllJobsStuff.allUVs[z + (maxX + 1) * x] =
+                           new NativeArray<float2>((BoardWidth - cornerX)* (BoardWidth - cornerZ) * 4, Allocator.Persistent);
+                        mesh2 = GenerateTerrainMesh(BoardWidth - cornerX, BoardWidth - cornerZ, cornerX, cornerZ, height,
+                            AfterAllJobsStuff.allUVs[z + (maxX + 1) * x]);
                         aabb = new AABB
                         {
                             Center = pos,
@@ -517,7 +532,8 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     }
 
     // generates the full tile mesh in pieces
-    public Mesh GenerateTerrainMesh(int width, int depth, int startX, int startZ, int height)
+    public Mesh GenerateTerrainMesh(int width, int depth, int startX, int startZ, int height,
+        NativeArray<float2> uvs)
     {
         int triangleIndex = 0;
         int vertexIndex = 0;
@@ -526,7 +542,9 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         Mesh terrainMesh = new Mesh();
         List<Vector3> vert = new List<Vector3>(width * depth * vertexMultiplier);
         List<int> tri = new List<int>(width * depth * 6);
-        List<Vector2> uv = new List<Vector2>(width * depth * vertexMultiplier);
+        //List<Vector2> uv = new List<Vector2>(width * depth * vertexMultiplier);
+
+        int uvIndex = 0;
 
         for (int x = 0; x < width; x++)
         {
@@ -552,14 +570,24 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
                 //uv.Add(new Vector2(0, 1));
                 //uv.Add(new Vector2(1, 1));
                 //uv.Add(new Vector2(1, 0));
-                uv.Add(new Vector2(textures[textureIndex].pixelStartX,
-                    textures[textureIndex].pixelStartY));
-                uv.Add(new Vector2(textures[textureIndex].pixelStartX,
-                        textures[textureIndex].pixelEndY));
-                uv.Add(new Vector2(textures[textureIndex].pixelEndX,
-                    textures[textureIndex].pixelEndY));
-                uv.Add(new Vector2(textures[textureIndex].pixelEndX,
-                    textures[textureIndex].pixelStartY));
+                //uv.Add(new Vector2(textures[textureIndex].pixelStartX,
+                //    textures[textureIndex].pixelStartY));
+                //uv.Add(new Vector2(textures[textureIndex].pixelStartX,
+                //        textures[textureIndex].pixelEndY));
+                //uv.Add(new Vector2(textures[textureIndex].pixelEndX,
+                //    textures[textureIndex].pixelEndY));
+                //uv.Add(new Vector2(textures[textureIndex].pixelEndX,
+                //    textures[textureIndex].pixelStartY));
+
+                uvs[uvIndex] = new float2(textures[textureIndex].pixelStartX,
+                   textures[textureIndex].pixelStartY);
+                uvs[uvIndex + 1] = new float2(textures[textureIndex].pixelStartX,
+                        textures[textureIndex].pixelEndY);
+                uvs[uvIndex + 2] = new float2(textures[textureIndex].pixelEndX,
+                    textures[textureIndex].pixelEndY);
+                uvs[uvIndex + 3] = new float2(textures[textureIndex].pixelEndX,
+                    textures[textureIndex].pixelStartY);
+                uvIndex += 4;
 
                 // front or top face                   
                 tri.Add(vertexIndex);
@@ -577,7 +605,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         }
 
         terrainMesh.vertices = vert.ToArray();
-        terrainMesh.uv = uv.ToArray();
+        terrainMesh.SetUVs(0,uvs);
         terrainMesh.triangles = tri.ToArray();
         terrainMesh.RecalculateNormals();
         terrainMesh.RecalculateBounds();
@@ -751,6 +779,17 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         //Debug.Log("mesh element at: " + (zIndex + (maxX + 1) * xIndex));
         // only one mesh
         return allMeshes[zIndex + (maxX+1) * xIndex];
+
+    }
+
+    public static NativeArray<float2> getUVs(int x, int z, int width)
+    {
+        int maxX = width / MAX_MESH_WIDTH;
+        int xIndex = x / MAX_MESH_WIDTH;
+        int zIndex = z / MAX_MESH_WIDTH;
+        //Debug.Log("mesh element at: " + (zIndex + (maxX + 1) * xIndex));
+        // only one mesh
+        return AfterAllJobsStuff.allUVs[zIndex + (maxX + 1) * xIndex];
 
     }
 
