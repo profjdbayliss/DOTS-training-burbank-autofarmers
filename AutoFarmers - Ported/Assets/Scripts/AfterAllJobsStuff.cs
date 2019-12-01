@@ -24,7 +24,7 @@ public struct ComponentSetInfo
 public class AfterAllJobsStuff : ComponentSystem
 {
     private static Unity.Mathematics.Random rand;
-    public static NativeArray<float2>[] allUVs;
+    //public static NativeArray<float2>[] allUVs;
 
     protected override void OnCreate()
     {
@@ -33,11 +33,11 @@ public class AfterAllJobsStuff : ComponentSystem
 
     protected override void OnDestroy()
     {
-        for (int i = 0; i < allUVs.Length; i++)
-        {
-            if (allUVs[i].IsCreated)
-                allUVs[i].Dispose();
-        }
+        //for (int i = 0; i < allUVs.Length; i++)
+        //{
+        //    if (allUVs[i].IsCreated)
+        //        allUVs[i].Dispose();
+        //}
 
         base.OnDestroy();
 
@@ -408,7 +408,8 @@ public class AfterAllJobsStuff : ComponentSystem
                     else
                     {
                         // we really have to instantiate the plant
-                        instance = entityManager.Instantiate(GridDataInitialization.plantEntity);
+                        int nextRandom = UnityEngine.Mathf.Abs(rand.NextInt()) % GridDataInitialization.DIFF_PLANT_COUNT;
+                        instance = entityManager.Instantiate(GridDataInitialization.plantEntity[nextRandom]);
                         Rotation rotation = entityManager.GetComponentData<Rotation>(instance);
                         var newRot = rotation.Value * Quaternion.Euler(0, 0, 90);
                         entityManager.SetComponentData(instance, new Rotation { Value = newRot });
