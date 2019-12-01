@@ -64,25 +64,45 @@ public class AfterAllJobsStuff : ComponentSystem
             TagInfo tagInfo = DroneTaskSystem.addRemoveTags.Dequeue();
             if (tagInfo.shouldRemove == 1)
             {
-                if (tagInfo.type == Tags.NeedsTask)
+                switch (tagInfo.type)
                 {
-                    entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                    case Tags.Moving:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
+                        break;
+                    case Tags.NeedsTask:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                        break;
+                    case Tags.PerformTask:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(PerformTaskTag));
+                        break;
+                    case Tags.Disable:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(Disabled));
+                        break;
+                    default:
+                        break;
                 }
-                else if (tagInfo.type == Tags.Moving)
-                {
-                    entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
-                }
+                
             }
             else
             {
-                if (tagInfo.type == Tags.NeedsTask)
+                switch (tagInfo.type)
                 {
-                    entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                    case Tags.Moving:
+                        entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
+                        break;
+                    case Tags.NeedsTask:
+                        entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                        break;
+                    case Tags.PerformTask:
+                        entityManager.AddComponent(tagInfo.entity, typeof(PerformTaskTag));
+                        break;
+                    case Tags.Disable:
+                        entityManager.AddComponent(tagInfo.entity, typeof(Disabled));
+                        break;
+                    default:
+                        break;
                 }
-                else if (tagInfo.type == Tags.Moving)
-                {
-                    entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
-                }
+                
             }
         }
 
@@ -98,24 +118,42 @@ public class AfterAllJobsStuff : ComponentSystem
             TagInfo tagInfo = FarmerTaskSystem.addRemoveTags.Dequeue();
             if (tagInfo.shouldRemove == 1)
             {
-                if (tagInfo.type == Tags.NeedsTask)
+                switch (tagInfo.type)
                 {
-                    entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
-                }
-                else if (tagInfo.type == Tags.Moving)
-                {
-                    entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
+                    case Tags.Moving:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
+                        break;
+                    case Tags.NeedsTask:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                        break;
+                    case Tags.PerformTask:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(PerformTaskTag));
+                        break;
+                    case Tags.Disable:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(Disabled));
+                        break;
+                    default:
+                        break;
                 }
             }
             else
             {
-                if (tagInfo.type == Tags.NeedsTask)
+                switch (tagInfo.type)
                 {
-                    entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
-                }
-                else if (tagInfo.type == Tags.Moving)
-                {
-                    entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
+                    case Tags.Moving:
+                        entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
+                        break;
+                    case Tags.NeedsTask:
+                        entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                        break;
+                    case Tags.PerformTask:
+                        entityManager.AddComponent(tagInfo.entity, typeof(PerformTaskTag));
+                        break;
+                    case Tags.Disable:
+                        entityManager.AddComponent(tagInfo.entity, typeof(Disabled));
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -132,32 +170,42 @@ public class AfterAllJobsStuff : ComponentSystem
             TagInfo tagInfo = MovementSystem.addRemoveTags.Dequeue();
             if (tagInfo.shouldRemove == 1)
             {
-                if (tagInfo.type == Tags.NeedsTask)
+                switch (tagInfo.type)
                 {
-                    entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
-                }
-                else if (tagInfo.type == Tags.Moving)
-                {
-                    entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
-                }
-                else if (tagInfo.type == Tags.PerformTask)
-                {
-                    entityManager.RemoveComponent(tagInfo.entity, typeof(PerformTaskTag));
+                    case Tags.Moving:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
+                        break;
+                    case Tags.NeedsTask:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                        break;
+                    case Tags.PerformTask:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(PerformTaskTag));
+                        break;
+                    case Tags.Disable:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(Disabled));
+                        break;
+                    default:
+                        break;
                 }
             }
             else
             {
-                if (tagInfo.type == Tags.NeedsTask)
+                switch (tagInfo.type)
                 {
-                    entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
-                }
-                else if (tagInfo.type == Tags.Moving)
-                {
-                    entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
-                }
-                else if (tagInfo.type == Tags.PerformTask)
-                {
-                    entityManager.AddComponent(tagInfo.entity, typeof(PerformTaskTag));
+                    case Tags.Moving:
+                        entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
+                        break;
+                    case Tags.NeedsTask:
+                        entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                        break;
+                    case Tags.PerformTask:
+                        entityManager.AddComponent(tagInfo.entity, typeof(PerformTaskTag));
+                        break;
+                    case Tags.Disable:
+                        entityManager.AddComponent(tagInfo.entity, typeof(Disabled));
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -168,40 +216,42 @@ public class AfterAllJobsStuff : ComponentSystem
             TagInfo tagInfo = PerformTaskSystem.addRemoveTags.Dequeue();
             if (tagInfo.shouldRemove == 1)
             {
-                if (tagInfo.type == Tags.NeedsTask)
+                switch (tagInfo.type)
                 {
-                    entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
-                }
-                else if (tagInfo.type == Tags.Moving)
-                {
-                    entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
-                }
-                else if (tagInfo.type == Tags.PerformTask)
-                {
-                    entityManager.RemoveComponent(tagInfo.entity, typeof(PerformTaskTag));
-                }
-                else if (tagInfo.type == Tags.Disable)
-                {
-                    entityManager.RemoveComponent(tagInfo.entity, typeof(Disabled));
+                    case Tags.Moving:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(MovingTag));
+                        break;
+                    case Tags.NeedsTask:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                        break;
+                    case Tags.PerformTask:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(PerformTaskTag));
+                        break;
+                    case Tags.Disable:
+                        entityManager.RemoveComponent(tagInfo.entity, typeof(Disabled));
+                        break;
+                    default:
+                        break;
                 }
             }
             else
             {
-                if (tagInfo.type == Tags.NeedsTask)
+                switch (tagInfo.type)
                 {
-                    entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
-                }
-                else if (tagInfo.type == Tags.Moving)
-                {
-                    entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
-                }
-                else if (tagInfo.type == Tags.PerformTask)
-                {
-                    entityManager.AddComponent(tagInfo.entity, typeof(PerformTaskTag));
-                }
-                else if (tagInfo.type == Tags.Disable)
-                {
-                    entityManager.AddComponent(tagInfo.entity, typeof(Disabled));
+                    case Tags.Moving:
+                        entityManager.AddComponent(tagInfo.entity, typeof(MovingTag));
+                        break;
+                    case Tags.NeedsTask:
+                        entityManager.AddComponent(tagInfo.entity, typeof(NeedsTaskTag));
+                        break;
+                    case Tags.PerformTask:
+                        entityManager.AddComponent(tagInfo.entity, typeof(PerformTaskTag));
+                        break;
+                    case Tags.Disable:
+                        entityManager.AddComponent(tagInfo.entity, typeof(Disabled));
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -219,11 +269,7 @@ public class AfterAllJobsStuff : ComponentSystem
             Translation trans = new Translation { Value = setInfo.trans };
             entityManager.SetComponentData(setInfo.entity, trans);
         }
-
-        //=============================================
-        //
-        // PLANT SYSTEM
-        //
+        
         while (PlantSystem.plantCreationDeletionInfo.Count > 0)
         {
             Entity info = (Entity)PlantSystem.plantCreationDeletionInfo.Dequeue();
@@ -233,11 +279,18 @@ public class AfterAllJobsStuff : ComponentSystem
         }
 
         //
+        // Things that have nothing to do with command buffer compile issues and
+        // would likely remain as not parallel.
+        //
+
+        //
         // PERFORM TASK SYSTEM 
         //
 
         // parallelization would be difficult since multiple farmers can potentially
-        // turn the same tile
+        // turn the same tile into a tilled tile
+        // Would have to make it so that only one farmer can set the tile
+        // to parallelize this
         while (PerformTaskSystem.tillChanges.Count > 0)
         {
             float2 pos = PerformTaskSystem.tillChanges.Dequeue();
@@ -279,6 +332,7 @@ public class AfterAllJobsStuff : ComponentSystem
 
         // max this gets run is once a frame and
         // many times it doesn't get run at all
+        // not worth running in parallel
         if (PerformTaskSystem.plantsSold[0] > 0)
         {
             PerformTaskSystem.storeInfo.moneyForFarmers += PerformTaskSystem.plantsSold[0];
@@ -343,6 +397,8 @@ public class AfterAllJobsStuff : ComponentSystem
         // DRONE TASK SYSTEM:
         //
 
+        // This is here as hash table removals can't
+        // be done in parallel (with good reason!)
         GridData data = GridData.GetInstance();
         // take care of drones
         while (DroneTaskSystem.hashRemovalsDrone.Count > 0)
@@ -382,9 +438,8 @@ public class AfterAllJobsStuff : ComponentSystem
         // FARMER TASK SYSTEM:
         //
 
-        // this happens in the main thread
-        // removal isn't in the parallel writer for the hash table
-        // so it's just going to have to happen sequentially
+        // This is here because hash table removals can't
+        // be done in parallel.
         while (FarmerTaskSystem.hashRemovalsFarmer.Count > 0)
         {
             FarmerTaskSystem.RemovalInfo remInfo = FarmerTaskSystem.hashRemovalsFarmer.Dequeue();

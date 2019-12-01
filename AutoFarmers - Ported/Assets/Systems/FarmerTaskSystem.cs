@@ -342,7 +342,7 @@ public class FarmerTaskSystem : JobComponentSystem
         job.nextIndex = index;
         //job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         job.gridSize = data.width;
-        job.radiusForSearch = data.width/2;
+        job.radiusForSearch = data.width/4;
         job.removals = hashRemovalsFarmer.AsParallelWriter();
         job.IsPlantType = GetComponentDataFromEntity<PlantComponent>(true);
         job.plantGrowthMax = PlantSystem.MAX_GROWTH;

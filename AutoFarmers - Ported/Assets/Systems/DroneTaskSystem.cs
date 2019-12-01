@@ -276,7 +276,7 @@ public class DroneTaskSystem : JobComponentSystem
         jobDrone.nextIndex = index;
         //jobDrone.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         jobDrone.gridSize = data.width;
-        jobDrone.radiusForSearch = 15;
+        jobDrone.radiusForSearch = data.width/2;
         jobDrone.removals = hashRemovalsDrone.AsParallelWriter();
         jobDrone.IsPlantType = GetComponentDataFromEntity<PlantComponent>(true);
         jobDrone.plantGrowthMax = PlantSystem.MAX_GROWTH;
