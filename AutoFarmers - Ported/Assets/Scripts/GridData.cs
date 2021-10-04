@@ -1,8 +1,6 @@
-﻿using System;
-using Unity.Collections;
+﻿using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-using UnityEngine;
 
 // Data structure: hash table with Entity information per tile position
 // where it exists since it's a sparse data set for the majority
@@ -32,8 +30,9 @@ public class GridData
     }
 
 
-    public void OnDestroy()
+    public void MyDestroy()
     {
+        UnityEngine.Debug.Log("getting rid of the grid data hash table");
         if (gridStatus.IsCreated)
         {
             gridStatus.Dispose();

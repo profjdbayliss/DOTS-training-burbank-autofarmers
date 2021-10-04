@@ -5,7 +5,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 
-public class DroneTaskSystem : JobComponentSystem
+public class DroneTaskSystem : SystemBase
 {
     public NativeArray<int> randomValues;
     public Unity.Mathematics.Random rand;
@@ -288,7 +288,7 @@ public class DroneTaskSystem : JobComponentSystem
         }
     }
 
-    protected override JobHandle OnUpdate(JobHandle inputDependencies)
+    protected override void OnUpdate()
     {
         GridData data = GridData.GetInstance();
         int index = System.Math.Abs(rand.NextInt()) % randomValues.Length;
@@ -314,10 +314,7 @@ public class DroneTaskSystem : JobComponentSystem
         jobDrone.EntityInfoHandle = entityInfoType;
         jobDrone.EntityType = entities;
 
-        JobHandle jobHandle = jobDrone.ScheduleParallel(m_Group, inputDependencies);
-      
-        return jobHandle;
-
+        this.Dependency = jobDrone.ScheduleParallel(m_Group, this.Dependency);
     }
 
 }

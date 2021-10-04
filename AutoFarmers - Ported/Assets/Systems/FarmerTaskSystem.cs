@@ -5,7 +5,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 
-public class FarmerTaskSystem : JobComponentSystem
+public class FarmerTaskSystem : SystemBase
 {
     public NativeArray<int> randomValues;
     public Unity.Mathematics.Random rand;
@@ -346,7 +346,7 @@ public class FarmerTaskSystem : JobComponentSystem
         }
     }
     
-    protected override JobHandle OnUpdate(JobHandle inputDependencies)
+    protected override void OnUpdate()
     {
         GridData data = GridData.GetInstance();
         int index = System.Math.Abs(rand.NextInt()) % randomValues.Length;
@@ -374,9 +374,7 @@ public class FarmerTaskSystem : JobComponentSystem
         job.EntityInfoHandle = entityInfoType;
         job.EntityType = entities;
         
-        JobHandle jobHandle = job.ScheduleParallel(m_Group, inputDependencies);
-        return jobHandle;
-        
+        this.Dependency = job.ScheduleParallel(m_Group, this.Dependency);
     }
 
 }

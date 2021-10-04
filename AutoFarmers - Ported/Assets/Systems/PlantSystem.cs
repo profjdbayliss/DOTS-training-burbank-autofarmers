@@ -9,7 +9,7 @@ using UnityEngine.PlayerLoop;
 using static Unity.Mathematics.math;
 
 
-public class PlantSystem : JobComponentSystem
+public class PlantSystem : SystemBase
 {
     public static float MAX_GROWTH = 120.0f;
     private float deltaTime;
@@ -52,7 +52,7 @@ public class PlantSystem : JobComponentSystem
     }
 
     [BurstCompile]
-    struct PlantSystemJob : IJobChunk
+    struct PlantSystemJob : IJobEntityBatch
     {
         [ReadOnly] public float deltaTime;
         [ReadOnly] public ComponentDataFromEntity<Translation> translations;
@@ -64,13 +64,13 @@ public class PlantSystem : JobComponentSystem
         public ComponentTypeHandle<PlantComponent> PlantComponentTypeHandle;
         public ComponentTypeHandle<NonUniformScale> NonUniformScaleTypeHandle;
 
-        public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
+        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
         {
-            var plantComponents = chunk.GetNativeArray(PlantComponentTypeHandle);
-            var scales = chunk.GetNativeArray(NonUniformScaleTypeHandle);
-            var entities = chunk.GetNativeArray(EntityType);
+            var plantComponents = batchInChunk.GetNativeArray(PlantComponentTypeHandle);
+            var scales = batchInChunk.GetNativeArray(NonUniformScaleTypeHandle);
+            var entities = batchInChunk.GetNativeArray(EntityType);
             
-            for (var i = 0; i < chunk.Count; i++)
+            for (var i = 0; i < batchInChunk.Count; i++)
             {
                 PlantState state = (PlantState) plantComponents[i].state;
 
@@ -128,26 +128,86 @@ public class PlantSystem : JobComponentSystem
         }
     }
 
-    protected override JobHandle OnUpdate(JobHandle inputDependencies)
+    protected override void OnUpdate()
     {
-        // chunk vars
-        var plantType = GetComponentTypeHandle<PlantComponent>();
-        var scaleType = GetComponentTypeHandle<NonUniformScale>();
-        var entities = GetEntityTypeHandle();
-        
-        // job
-        var job = new PlantSystemJob();
-        job.deltaTime = UnityEngine.Time.deltaTime;
-        job.maxGrowth = MAX_GROWTH;
-        job.plantChanges = plantCreationDeletionInfo.AsParallelWriter();
-        job.translations = GetComponentDataFromEntity<Translation>(true);
-        job.PlantComponentTypeHandle = plantType;
-        job.NonUniformScaleTypeHandle = scaleType;
-        job.setInfo = componentSetInfo.AsParallelWriter();
-        job.EntityType = entities;
-        
-        JobHandle jobHandle = job.ScheduleParallel(m_Group, inputDependencies);
-        return jobHandle;
+        // // chunk vars
+        // var plantType = GetComponentTypeHandle<PlantComponent>();
+        // var scaleType = GetComponentTypeHandle<NonUniformScale>();
+        // var entities = GetEntityTypeHandle();
+        //
+        // // job
+        // var job = new PlantSystemJob();
+        // job.deltaTime = UnityEngine.Time.deltaTime;
+        // job.maxGrowth = MAX_GROWTH;
+        // job.plantChanges = plantCreationDeletionInfo.AsParallelWriter();
+        // job.translations = GetComponentDataFromEntity<Translation>(true);
+        // job.PlantComponentTypeHandle = plantType;
+        // job.NonUniformScaleTypeHandle = scaleType;
+        // job.setInfo = componentSetInfo.AsParallelWriter();
+        // job.EntityType = entities;
+        //
+        // int batchesPerChunk = 4;
+        // this.Dependency = job.ScheduleParallel(m_Group, batchesPerChunk, this.Dependency);
 
+        float deltaTime = UnityEngine.Time.deltaTime;
+        float maxGrowth = MAX_GROWTH;
+        var translations = GetComponentDataFromEntity<Translation>(true);
+        var setInfo = componentSetInfo.AsParallelWriter();
+        var plantChanges = plantCreationDeletionInfo.AsParallelWriter();
+        JobHandle job = Entities.ForEach((Entity currentEntity, ref PlantComponent plant, ref NonUniformScale scale) => { 
+            PlantState state = (PlantState) plant.state;
+
+                switch (state)
+                {
+                    case PlantState.None:
+
+                        break;
+                    case PlantState.Growing:
+                        float currentTotalTime = deltaTime + plant.timeGrown;
+
+                        if (currentTotalTime < maxGrowth)
+                        {
+                            float currentScale = currentTotalTime / 5.0f;
+                            scale = new NonUniformScale {Value = new float3(currentScale, 1.0f, currentScale)};
+                            var data = new PlantComponent
+                            {
+                                timeGrown = currentTotalTime,
+                                state = (int) PlantState.Growing,
+                            };
+                            plant = data;
+                        }
+                        else
+                        {
+                            var data = new PlantComponent
+                            {
+                                timeGrown = maxGrowth,
+                                state = (int) PlantState.None,
+                            };
+                            plant = data;
+                        }
+
+                        break;
+                    case PlantState.Following:
+                        float3 pos = translations[plant.farmerToFollow].Value;
+                        float3 trans = new float3(pos.x, pos.y + 2, pos.z);
+                        setInfo.Enqueue(new ComponentTransInfo
+                        {
+                            entity = currentEntity,
+                            trans = trans
+                        });
+
+                        break;
+                    case PlantState.Deleted:
+                        // multiple entities can try to delete the plant
+                        // taken care of in the single threaded end of the jobs
+                        //UnityEngine.Debug.Log("deleting a plant " + entity.Index);
+                        plantChanges.Enqueue(currentEntity);
+                        break;
+                    default:
+                        break;
+                }
+            
+        }).WithReadOnly(translations).ScheduleParallel(this.Dependency);
+        this.Dependency = job;
     }
 }

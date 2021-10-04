@@ -1,13 +1,8 @@
-﻿using System.CodeDom;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using Unity.Entities;
+﻿using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 using Unity.Transforms;
 using Unity.Collections;
-using UnityEditor;
 
 public struct TagInfo
 {
@@ -29,7 +24,7 @@ public struct ComponentSetInfo
 [UpdateAfter(typeof(MovementSystem))]
 [UpdateAfter(typeof(PerformTaskSystem))]
 [UpdateAfter(typeof(PlantSystem))]
-public class AfterAllJobsStuff : ComponentSystem
+public class AfterAllJobsStuff : SystemBase
 {
     private static Unity.Mathematics.Random rand;
     //public static NativeArray<float2>[] allUVs;
@@ -39,22 +34,19 @@ public class AfterAllJobsStuff : ComponentSystem
         rand = new Unity.Mathematics.Random(42);
     }
 
-    // protected override void OnDestroy()
-    // {
-    //     //for (int i = 0; i < allUVs.Length; i++)
-    //     //{
-    //     //    if (allUVs[i].IsCreated)
-    //     //        allUVs[i].Dispose();
-    //     //}
-    //
-    //     base.OnDestroy();
-    //
-    // }
+    protected override void OnDestroy()
+    {
+        GridDataInitialization.MyDestroy();
+        GridData.GetInstance().MyDestroy();
+    
+        base.OnDestroy();
+    
+    }
     
     
     protected override void OnUpdate()
     {
-        EntityManager entityManager = World.All[0].EntityManager;
+        EntityManager entityManager = World.EntityManager;
         entityManager.CompleteAllJobs();
 
         // now do special stuff that can't be done in parallel!

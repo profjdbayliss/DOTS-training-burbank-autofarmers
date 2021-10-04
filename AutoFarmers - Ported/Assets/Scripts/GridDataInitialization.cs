@@ -1,14 +1,10 @@
 ﻿using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
-using Unity.Burst;
-using Unity.Jobs;
 using System;
 
 public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity, IDeclareReferencedPrefabs
@@ -74,9 +70,9 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     private EntityArchetype boardArchetype; // includes the game board tag
     private Entity boardEntity; // the actual board
 
-    void OnDestroy()
+    public static void MyDestroy()
     {
-    
+    UnityEngine.Debug.Log("getting rid of all init native arrays");
         for (int i = 0; i < allTris.Length; i++)
         {
             if (allTris[i].IsCreated)
@@ -95,8 +91,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
                 allTris[i].Dispose();
         }
         
-        if (blockIndices.IsCreated)
-            blockIndices.Dispose();
+        
     
         // GridData data = GridData.GetInstance();
         // if (data.gridStatus.IsCreated)
@@ -427,7 +422,9 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
             entityManager.AddComponent<NeedsTaskTag>(instance);
 
         }
-
+        
+        if (blockIndices.IsCreated)
+            blockIndices.Dispose();
     }
 
     public static void Convert(

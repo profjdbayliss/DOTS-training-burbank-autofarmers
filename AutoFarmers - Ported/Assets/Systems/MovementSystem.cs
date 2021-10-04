@@ -7,7 +7,7 @@ using Unity.Transforms;
 using static Unity.Mathematics.math;
 using UnityEngine;
 
-public class MovementSystem : JobComponentSystem
+public class MovementSystem : SystemBase
 {
     public float deltaTime;
     public static NativeQueue<TagInfo> addRemoveTags;
@@ -31,7 +31,7 @@ public class MovementSystem : JobComponentSystem
     }
     
     [BurstCompile]
-    public struct MovementJob : IJobChunk
+    public struct MovementJob : IJobEntityBatch
 
     {
         public float deltaTime;
@@ -44,17 +44,17 @@ public class MovementSystem : JobComponentSystem
         public ComponentTypeHandle<MovementComponent> MovementTypeHandle;
         public ComponentTypeHandle<EntityInfo> EntityInfoTypeHandle;
         
-        public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
+        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
         {
             float tolerance = 0.2f;
 
-            var rotations = chunk.GetNativeArray(RotationTypeHandle);
-            var translations = chunk.GetNativeArray(TranslationTypeHandle);
-            var movements = chunk.GetNativeArray(MovementTypeHandle);
-            var intents = chunk.GetNativeArray(EntityInfoTypeHandle);
-            var entities = chunk.GetNativeArray(EntityType);
+            var rotations = batchInChunk.GetNativeArray(RotationTypeHandle);
+            var translations = batchInChunk.GetNativeArray(TranslationTypeHandle);
+            var movements = batchInChunk.GetNativeArray(MovementTypeHandle);
+            var intents = batchInChunk.GetNativeArray(EntityInfoTypeHandle);
+            var entities = batchInChunk.GetNativeArray(EntityType);
 
-            for (var i = 0; i < chunk.Count; i++)
+            for (var i = 0; i < batchInChunk.Count; i++)
             {
                 // Calculate DX and DZ (y represents up, therefore we won't be using that in this case).  
                 float dx = movements[i].targetPos.x - translations[i].Value.x;
@@ -282,7 +282,7 @@ public class MovementSystem : JobComponentSystem
     }
 
 
-    protected override JobHandle OnUpdate(JobHandle inputDependencies)
+    protected override void OnUpdate()
     {
         // chunk vars
         var translationType = GetComponentTypeHandle<Translation>();
@@ -301,7 +301,7 @@ public class MovementSystem : JobComponentSystem
         job.EntityInfoTypeHandle = entityInfoType;
         job.EntityType = entities;
         
-        JobHandle jobHandle = job.ScheduleParallel(m_Group, inputDependencies);
-        return jobHandle;
+        int batchesPerChunk = 4;
+        this.Dependency = job.ScheduleParallel(m_Group, batchesPerChunk, this.Dependency);
     }
 }

@@ -251,7 +251,7 @@ MonoBehaviour:
   rockSpawnAttempts: 2000
   storeCount: 20
   maxFarmers: 100
-  farmerNumber: 100
+  farmerNumber: 25
   maxDrones: 10
   RockPrefab: {fileID: 8408007631743160701, guid: 3eed0651058123240bd33f559d605398,
     type: 3}
@@ -264,8 +264,6 @@ MonoBehaviour:
   FarmerPrefab: {fileID: 6225222254032698798, guid: b57347db48292a1498f043cf8e5e9704,
     type: 3}
   DronePrefab: {fileID: 2023183433951940274, guid: 59524a8f7bdb3fe4ca662feab6804baf,
-    type: 3}
-  DummyMaterialsPrefab: {fileID: 6174345470540196706, guid: e9bf5dc2dd0b50e449e597280957624e,
     type: 3}
 --- !u!4 &844700566
 Transform:
