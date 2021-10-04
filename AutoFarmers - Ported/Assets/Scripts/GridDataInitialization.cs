@@ -11,7 +11,6 @@ using Unity.Burst;
 using Unity.Jobs;
 using System;
 
-[RequiresEntityConversion]
 public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity, IDeclareReferencedPrefabs
 {
 
@@ -75,6 +74,35 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
     private EntityArchetype boardArchetype; // includes the game board tag
     private Entity boardEntity; // the actual board
 
+    void OnDestroy()
+    {
+    
+        for (int i = 0; i < allTris.Length; i++)
+        {
+            if (allTris[i].IsCreated)
+                allTris[i].Dispose();
+        }
+    
+        for (int i = 0; i < allVerts.Length; i++)
+        {
+            if (allVerts[i].IsCreated)
+                allVerts[i].Dispose();
+        }
+    
+        for (int i = 0; i < allTris.Length; i++)
+        {
+            if (allTris[i].IsCreated)
+                allTris[i].Dispose();
+        }
+        
+        if (blockIndices.IsCreated)
+            blockIndices.Dispose();
+    
+        // GridData data = GridData.GetInstance();
+        // if (data.gridStatus.IsCreated)
+        //     data.gridStatus.Dispose();
+    }
+
     // Referenced prefabs have to be declared so that the conversion system knows about them ahead of time
     public void DeclareReferencedPrefabs(List<GameObject> referencedPrefabs)
     {
@@ -82,6 +110,8 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         referencedPrefabs.Add(RockPrefab);
         referencedPrefabs.Add(StorePrefab);
         referencedPrefabs.Add(PlantMeshPrefab);
+        referencedPrefabs.Add(DronePrefab);
+        referencedPrefabs.Add(FarmerPrefab);
     }
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
@@ -102,37 +132,40 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
         meshRenderer.GetSharedMaterials(materials);
 
         // set up entity and manager
-        entityManager = World.Active.EntityManager;
-        boardEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(TilePrefab, World.Active);
+        entityManager = dstManager;
+        boardEntity = conversionSystem.GetPrimaryEntity(TilePrefab);
 
         // a board archetype
         boardArchetype = entityManager.CreateArchetype(
             typeof(Translation), typeof(GridBoard));
 
         // Generate rock prefab entity
-        rockEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(RockPrefab, World.Active);
+        rockEntity = conversionSystem.GetPrimaryEntity(RockPrefab);
         entityManager.AddComponentData(rockEntity, new RockTag { });
 
         // Generate drone prefab entity
-        droneEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(DronePrefab, World.Active);
+        droneEntity = conversionSystem.GetPrimaryEntity(DronePrefab);
         entityManager.AddComponentData(droneEntity, new MovementComponent { });
-        entityManager.AddComponentData(droneEntity, new EntityInfo { type = -1 });
+        entityManager.AddComponentData(droneEntity, new EntityInfo { specificEntity = droneEntity, type = -1 });
         entityManager.AddComponent(droneEntity, typeof(DroneTag));
 
         // generate 3 plants to use for everything else
         plantEntity = new Entity[DIFF_PLANT_COUNT];
         Unity.Mathematics.Random rand = new Unity.Mathematics.Random(42);
         int nextRandom = rand.NextInt();
+        MeshRenderer meshPlantRenderer = PlantMeshPrefab.GetComponent<MeshRenderer>();
+        var meshPlantFilter = PlantMeshPrefab.GetComponent<MeshFilter>();
+        var materials2 = new List<Material>(MATERIAL_NUMBER);
+        meshPlantRenderer.GetSharedMaterials(materials2);
+        
         for (int i = 0; i < DIFF_PLANT_COUNT; i++)
         {
             
             plantMesh = GeneratePlantMesh(nextRandom);
-            MeshRenderer meshPlantRenderer = PlantMeshPrefab.GetComponent<MeshRenderer>();
-            var meshPlantFilter = PlantMeshPrefab.GetComponent<MeshFilter>();
-            var meshPlantTmp = meshPlantFilter.sharedMesh;
-            meshPlantTmp = Instantiate(plantMesh);
+            var meshPlantTmp = Instantiate(plantMesh);
             meshPlantFilter.sharedMesh = meshPlantTmp;
-            plantEntity[i] = GameObjectConversionUtility.ConvertGameObjectHierarchy(PlantMeshPrefab, World.Active);
+            plantEntity[i] = conversionSystem.GetPrimaryEntity(PlantMeshPrefab);
+            Convert(plantEntity[i], dstManager, conversionSystem, meshPlantRenderer, meshPlantTmp, materials2);
             entityManager.AddComponent(plantEntity[i], typeof(PlantTag));
             entityManager.SetComponentData(plantEntity[i], new Translation { Value = new float3(-1, -5, -1) });
             entityManager.AddComponentData(plantEntity[i], new NonUniformScale { Value = new float3(1.0f, 2.0f, 1.0f) });
@@ -202,7 +235,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
             dstManager.AddComponentData(segmentEntity, localToWorld);
             dstManager.AddComponentData(segmentEntity, worldRenderBounds);
             dstManager.AddComponent(segmentEntity, ComponentType.ChunkComponent<ChunkWorldRenderBounds>());
-            dstManager.AddComponent(segmentEntity, typeof(Frozen));
+            //dstManager.AddComponent(segmentEntity, typeof(Frozen));
 
             Convert(segmentEntity, dstManager, conversionSystem, meshRenderer, mesh, materials);
 
@@ -344,7 +377,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
                 dstManager.AddComponentData(segmentEntity, localToWorld);
                 dstManager.AddComponentData(segmentEntity, worldRenderBounds);
                 dstManager.AddComponent(segmentEntity, ComponentType.ChunkComponent<ChunkWorldRenderBounds>());
-                dstManager.AddComponent(segmentEntity, typeof(Frozen));
+                //dstManager.AddComponent(segmentEntity, typeof(Frozen));
 
                 Convert(segmentEntity, dstManager, conversionSystem, meshRenderer, mesh, materials);
 
@@ -358,7 +391,7 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
 
         // generate the farmers
         // Create farmer entity prefab from the game object hierarchy once
-        farmerEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(FarmerPrefab, World.Active);
+        farmerEntity = conversionSystem.GetPrimaryEntity(FarmerPrefab);
         entityManager.AddComponent<FarmerTag>(farmerEntity);
 
         // FIX: this could be parallelized
@@ -386,13 +419,12 @@ public class GridDataInitialization : MonoBehaviour, IConvertGameObjectToEntity,
                 speed = 2,
                 targetPos = new float2(startX, startZ),
             };
-            var entityData = new EntityInfo { type = -1 };
-            entityManager.SetComponentData(instance, data);
+            var entityData = new EntityInfo { specificEntity = instance,type = -1 };
+            entityManager.AddComponentData(instance, data);
             entityManager.AddComponentData(instance, entityData);
 
             // give his first command based on the 1's in the hash
             entityManager.AddComponent<NeedsTaskTag>(instance);
-
 
         }
 

@@ -10,13 +10,15 @@ using UnityEngine;
 public class MovementSystem : JobComponentSystem
 {
     public float deltaTime;
-    public EntityCommandBufferSystem ecbs;
     public static NativeQueue<TagInfo> addRemoveTags;
-
+    EntityQuery m_Group;
+    
     protected override void OnCreate()
     {
-        ecbs = World.GetOrCreateSystem<EntityCommandBufferSystem>();
+        m_Group = GetEntityQuery(typeof(Translation), ComponentType.ReadOnly<MovementComponent>(),
+            typeof(EntityInfo), typeof(MovingTag));
         addRemoveTags = new NativeQueue<TagInfo>(Allocator.Persistent);
+        base.OnCreate();
     }
 
     protected override void OnDestroy()
@@ -26,176 +28,234 @@ public class MovementSystem : JobComponentSystem
             addRemoveTags.Dispose();
         }
         base.OnDestroy();
-
     }
-    [RequireComponentTag(typeof(MovingTag))]
+    
     [BurstCompile]
-    public struct MovementJob : IJobForEachWithEntity<Translation, Rotation, MovementComponent, EntityInfo>
+    public struct MovementJob : IJobChunk
 
     {
-        public EntityCommandBuffer.Concurrent ecb;
         public float deltaTime;
         public float2 rockPos;
         public NativeQueue<TagInfo>.ParallelWriter addRemoveTags;
-
-        public void Execute(Entity entity, int index, ref Translation translation, [ReadOnly] ref Rotation rotation, ref MovementComponent actor, ref EntityInfo intent)
+        // chunk vars
+        [ReadOnly] public ComponentTypeHandle<Rotation> RotationTypeHandle;
+        [ReadOnly] public EntityTypeHandle EntityType;
+        public ComponentTypeHandle<Translation> TranslationTypeHandle;
+        public ComponentTypeHandle<MovementComponent> MovementTypeHandle;
+        public ComponentTypeHandle<EntityInfo> EntityInfoTypeHandle;
+        
+        public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
         {
             float tolerance = 0.2f;
 
-            // Calculate DX and DZ (y represents up, therefore we won't be using that in this case).  
-            float dx = actor.targetPos.x - translation.Value.x;
-            float dz = actor.targetPos.y - translation.Value.z;
+            var rotations = chunk.GetNativeArray(RotationTypeHandle);
+            var translations = chunk.GetNativeArray(TranslationTypeHandle);
+            var movements = chunk.GetNativeArray(MovementTypeHandle);
+            var intents = chunk.GetNativeArray(EntityInfoTypeHandle);
+            var entities = chunk.GetNativeArray(EntityType);
 
-            if ((int)actor.middlePos.x != -1 && (int)actor.middlePos.y != -1)
+            for (var i = 0; i < chunk.Count; i++)
             {
-                //Debug.Log("targeting middle" + actor.middlePos);
-                // our target is the middle pos before the target 
-                dx = actor.middlePos.x - translation.Value.x;
-                dz = actor.middlePos.y - translation.Value.z;
-            }
+                // Calculate DX and DZ (y represents up, therefore we won't be using that in this case).  
+                float dx = movements[i].targetPos.x - translations[i].Value.x;
+                float dz = movements[i].targetPos.y - translations[i].Value.z;
 
-            //the specs state that we want to move in the shortest distance first, therefore, we will perform a check to decide whether x or z is smaller
-            //move from there. 
-            bool moveXFirst;
-            float2 currentPos = new float2(translation.Value.x, translation.Value.z);
-
-
-            //Debug.Log(dx);
-            //Debug.Log(dz);
-            //Debug.Log("goal and target : " + actor.intent + " " + actor.targetPos.x + " " + actor.targetPos.y);
-            if (Mathf.Abs(dx) <= Mathf.Abs(dz))
-            {
-                moveXFirst = true;
-            }
-            else
-            {
-                moveXFirst = false;
-            }
-
-            if (moveXFirst)
-            {
-
-                if (Mathf.Abs(dx) > tolerance)
+                if ((int) movements[i].middlePos.x != -1 && (int) movements[i].middlePos.y != -1)
                 {
-                    if (dx > 0)
-                    {
-                        //Debug.Log("moved towards dz");
-                        translation.Value = new float3(translation.Value.x + actor.speed * deltaTime, translation.Value.y, translation.Value.z);
-                    }
-                    else
-                    {
-                        //Debug.Log("moved towards dz");
-                        translation.Value = new float3(translation.Value.x - actor.speed * deltaTime, translation.Value.y, translation.Value.z);
-                    }
+                    //Debug.Log("targeting middle" + actor.middlePos);
+                    // our target is the middle pos before the target 
+                    dx = movements[i].middlePos.x - translations[i].Value.x;
+                    dz = movements[i].middlePos.y - translations[i].Value.z;
                 }
-                else if (Mathf.Abs(dz) > tolerance)
+
+                //the specs state that we want to move in the shortest distance first, therefore, we will perform a check to decide whether x or z is smaller
+                //move from there. 
+                bool moveXFirst;
+                float2 currentPos = new float2(translations[i].Value.x, translations[i].Value.z);
+
+                
+                //Debug.Log("goal and target diff: " +  dx + " " + dz );
+                if (Mathf.Abs(dx) <= Mathf.Abs(dz))
                 {
-                    if (dz < 0)
-                    {
-                        //Debug.Log("moved towards dx");
-                        translation.Value = new float3(translation.Value.x, translation.Value.y, translation.Value.z - actor.speed * deltaTime);
-                    }
-                    else
-                    {
-                        //Debug.Log("moved towards dx");
-                        translation.Value = new float3(translation.Value.x, translation.Value.y, translation.Value.z + actor.speed * deltaTime);
-                    }
+                    moveXFirst = true;
                 }
                 else
                 {
-                    //Debug.Log("At destination and was I headed to a rock1?: " + actor.intent + " " + actor.targetPos.x + " " + actor.targetPos.y);
-                    if ((int)actor.middlePos.x != -1 && (int)actor.middlePos.y != -1)
-                    {
-                        // we just hit the middle pos and so set things to go to target now
-                        actor.middlePos = new float2(-1, -1);
-                    }
-                    else if (intent.type == (int)Tiles.Rock || intent.type == (int)Tiles.Till ||
-                        intent.type == (int)Tiles.Plant || intent.type == (int)Tiles.Harvest ||
-                        intent.type == (int)Tiles.Store)
-                    {
-                        //Debug.Log("performing rock1 now");
-                        //ecb.AddComponent(index, entity, typeof(PerformTaskTag));
-                        //ecb.RemoveComponent(index, entity, typeof(MovingTag));
-                        addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.Moving });
-                        addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.PerformTask });
-
-
-                    }
-                    else
-                    {
-                        //ecb.AddComponent(index, entity, typeof(NeedsTaskTag));
-                        //ecb.RemoveComponent(index, entity, typeof(MovingTag));
-                        addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.Moving });
-                        addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.NeedsTask });
-
-                    }
-
+                    moveXFirst = false;
                 }
 
-            }
-
-            else
-            {
-                if (Mathf.Abs(dz) > tolerance)
+                if (moveXFirst)
                 {
-                    if (dz > 0)
+
+                    if (Mathf.Abs(dx) > tolerance)
                     {
-                        //Debug.Log("moved towards dx");
-                        translation.Value = new float3(translation.Value.x, translation.Value.y, translation.Value.z + actor.speed * deltaTime);
+                        if (dx > 0)
+                        {
+                            //Debug.Log("moved towards dz");
+                            translations[i] = new Translation
+                            {
+                                Value = new float3(translations[i].Value.x + movements[i].speed * deltaTime,
+                                    translations[i].Value.y, translations[i].Value.z)
+                            };
+                        }
+                        else
+                        {
+                            //Debug.Log("moved towards dz");
+                            translations[i] = new Translation
+                            {
+                                Value = new float3(translations[i].Value.x - movements[i].speed * deltaTime,
+                                    translations[i].Value.y, translations[i].Value.z)
+                            };
+                        }
+                    }
+                    else if (Mathf.Abs(dz) > tolerance)
+                    {
+                        if (dz < 0)
+                        {
+                            //Debug.Log("moved towards dx");
+                            translations[i] = new Translation
+                            {
+                                Value = new float3(translations[i].Value.x, translations[i].Value.y,
+                                    translations[i].Value.z - movements[i].speed * deltaTime)
+                            };
+                        }
+                        else
+                        {
+                            //Debug.Log("moved towards dx");
+                            translations[i] = new Translation
+                            {
+                                Value = new float3(translations[i].Value.x, translations[i].Value.y,
+                                    translations[i].Value.z + movements[i].speed * deltaTime)
+                            };
+                        }
                     }
                     else
                     {
-                        //Debug.Log("moved towards dx");
-                        translation.Value = new float3(translation.Value.x, translation.Value.y, translation.Value.z - actor.speed * deltaTime);
-                    }
-                }
-                else if (Mathf.Abs(dx) > tolerance)
-                {
-                    if (dx > 0)
-                    {
-                        //Debug.Log("moved towards dz");
-                        translation.Value = new float3(translation.Value.x + actor.speed * deltaTime, translation.Value.y, translation.Value.z);
-                    }
-                    else
-                    {
-                        //Debug.Log("moved towards dz");
-                        translation.Value = new float3(translation.Value.x - actor.speed * deltaTime, translation.Value.y, translation.Value.z);
+                        //Debug.Log("At destination and was I headed to a rock1?: " + actor.intent + " " + actor.targetPos.x + " " + actor.targetPos.y);
+                        if ((int) movements[i].middlePos.x != -1 && (int) movements[i].middlePos.y != -1)
+                        {
+                            // we just hit the middle pos and so set things to go to target now
+                            movements[i] = new MovementComponent
+                            {
+                                startPos = movements[i].startPos,
+                                targetPos = movements[i].targetPos,
+                                speed = movements[i].speed,
+                                middlePos = new float2(-1, -1)
+                            };
+                        }
+                        else if (intents[i].type == (int) Tiles.Rock || intents[i].type == (int) Tiles.Till ||
+                                 intents[i].type == (int) Tiles.Plant || intents[i].type == (int) Tiles.Harvest ||
+                                 intents[i].type == (int) Tiles.Store)
+                        {
+                            //Debug.Log("performing rock1 now");
+                            // add performtask and remove moving tag
+                            addRemoveTags.Enqueue(new TagInfo
+                                {shouldRemove = 1, entity = entities[i], type = Tags.Moving});
+                            addRemoveTags.Enqueue(new TagInfo
+                                {shouldRemove = 0, entity = entities[i], type = Tags.PerformTask});
+
+
+                        }
+                        else
+                        {
+                            // add needstask and remove moving tag
+                            addRemoveTags.Enqueue(new TagInfo
+                                {shouldRemove = 1, entity = intents[i].specificEntity, type = Tags.Moving});
+                            addRemoveTags.Enqueue(new TagInfo
+                                {shouldRemove = 0, entity = intents[i].specificEntity, type = Tags.NeedsTask});
+
+                        }
 
                     }
 
                 }
+
                 else
                 {
-                    //Debug.Log("At destination and was I headed to a rock?: " + actor.intent);
-
-                    if ((int)actor.middlePos.x != -1 && (int)actor.middlePos.y != -1)
+                    if (Mathf.Abs(dz) > tolerance)
                     {
-                        //Debug.Log("just got to the middle" + actor.middlePos);
-                        // we just hit the middle pos and so set things to go to target now
-                        actor.middlePos = new float2(-1, -1);
+                        if (dz > 0)
+                        {
+                            //Debug.Log("moved towards dx");
+                            translations[i] = new Translation
+                            {
+                                Value = new float3(translations[i].Value.x, translations[i].Value.y,
+                                    translations[i].Value.z + movements[i].speed * deltaTime)
+                            };
+                        }
+                        else
+                        {
+                            //Debug.Log("moved towards dx");
+                            translations[i] = new Translation
+                            {
+                                Value = new float3(translations[i].Value.x, translations[i].Value.y,
+                                    translations[i].Value.z - movements[i].speed * deltaTime)
+                            };
+                        }
                     }
-                    else if (intent.type == (int)Tiles.Rock || intent.type == (int)Tiles.Till ||
-                        intent.type == (int)Tiles.Plant || intent.type == (int)Tiles.Harvest ||
-                        intent.type == (int)Tiles.Store)
+                    else if (Mathf.Abs(dx) > tolerance)
                     {
-                        //Debug.Log("performing rock now");                        
-                        //ecb.AddComponent<PerformTaskTag>(index, entity);
-                        //ecb.RemoveComponent<MovingTag>(index, entity);
-                        addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.Moving });
-                        addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.PerformTask });
+                        if (dx > 0)
+                        {
+                            //Debug.Log("moved towards dz");
+                            translations[i] = new Translation
+                            {
+                                Value = new float3(translations[i].Value.x + movements[i].speed * deltaTime,
+                                    translations[i].Value.y, translations[i].Value.z)
+                            };
+                        }
+                        else
+                        {
+                            //Debug.Log("moved towards dz");
+                            translations[i] = new Translation
+                            {
+                                Value = new float3(translations[i].Value.x - movements[i].speed * deltaTime,
+                                    translations[i].Value.y, translations[i].Value.z)
+                            };
 
+                        }
 
                     }
                     else
                     {
-                        addRemoveTags.Enqueue(new TagInfo { shouldRemove = 1, entity = entity, type = Tags.Moving });
-                        addRemoveTags.Enqueue(new TagInfo { shouldRemove = 0, entity = entity, type = Tags.NeedsTask });
-                        //ecb.AddComponent<NeedsTaskTag>(index, entity);
-                        //ecb.RemoveComponent<MovingTag>(index, entity);
+                        //Debug.Log("At destination and was I headed to a rock?: " + intents[i].type);
+
+                        if ((int) movements[i].middlePos.x != -1 && (int) movements[i].middlePos.y != -1)
+                        {
+                            //Debug.Log("just got to the middle" + actor.middlePos);
+                            // we just hit the middle pos and so set things to go to target now
+                            movements[i] = new MovementComponent
+                            {
+                                startPos = movements[i].startPos,
+                                targetPos = movements[i].targetPos,
+                                speed = movements[i].speed,
+                                middlePos = new float2(-1, -1)
+                            };
+                        }
+                        else if (intents[i].type == (int) Tiles.Rock || intents[i].type == (int) Tiles.Till ||
+                                 intents[i].type == (int) Tiles.Plant || intents[i].type == (int) Tiles.Harvest ||
+                                 intents[i].type == (int) Tiles.Store)
+                        {
+                            //Debug.Log("performing rock now");  
+                            // add perform task and remove moving tag
+                            addRemoveTags.Enqueue(new TagInfo
+                                {shouldRemove = 1, entity = entities[i], type = Tags.Moving});
+                            addRemoveTags.Enqueue(new TagInfo
+                                {shouldRemove = 0, entity = entities[i], type = Tags.PerformTask});
+
+
+                        }
+                        else
+                        {
+                            // add needs task and remove moving tag
+                            addRemoveTags.Enqueue(new TagInfo
+                                {shouldRemove = 1, entity = entities[i], type = Tags.Moving});
+                            addRemoveTags.Enqueue(new TagInfo
+                                {shouldRemove = 0, entity = entities[i], type = Tags.NeedsTask});
+                        }
+
                     }
-
                 }
-
 
             }
         }
@@ -224,12 +284,24 @@ public class MovementSystem : JobComponentSystem
 
     protected override JobHandle OnUpdate(JobHandle inputDependencies)
     {
+        // chunk vars
+        var translationType = GetComponentTypeHandle<Translation>();
+        var rotationType = GetComponentTypeHandle<Rotation>(true);
+        var movementType = GetComponentTypeHandle<MovementComponent>();
+        var entityInfoType = GetComponentTypeHandle<EntityInfo>();
+        var entities = GetEntityTypeHandle();
+        
+        // job
         var job = new MovementJob();
-
-        job.deltaTime = Time.deltaTime;
-        job.ecb = ecbs.CreateCommandBuffer().ToConcurrent();
+        job.deltaTime = Time.DeltaTime;
         job.addRemoveTags = addRemoveTags.AsParallelWriter();
-
-        return job.Schedule(this, inputDependencies);
+        job.MovementTypeHandle = movementType;
+        job.RotationTypeHandle = rotationType;
+        job.TranslationTypeHandle = translationType;
+        job.EntityInfoTypeHandle = entityInfoType;
+        job.EntityType = entities;
+        
+        JobHandle jobHandle = job.ScheduleParallel(m_Group, inputDependencies);
+        return jobHandle;
     }
 }

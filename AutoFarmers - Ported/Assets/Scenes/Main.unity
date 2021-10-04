@@ -119,6 +119,8 @@ NavMeshSettings:
     manualTileSize: 0
     tileSize: 256
     accuratePlacement: 0
+    maxJobWorkers: 0
+    preserveTilesOutsideBounds: 0
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
@@ -198,6 +200,7 @@ Light:
   m_UseColorTemperature: 0
   m_BoundingSphereOverride: {x: 3.222e-42, y: 1.01e-43, z: 2.3509887e-38, w: 0}
   m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
   m_ShadowRadius: 0
   m_ShadowAngle: 0
 --- !u!4 &705507995
@@ -247,8 +250,8 @@ MonoBehaviour:
   boardWidth: 70
   rockSpawnAttempts: 2000
   storeCount: 20
-  maxFarmers: 10
-  farmerNumber: 10
+  maxFarmers: 100
+  farmerNumber: 100
   maxDrones: 10
   RockPrefab: {fileID: 8408007631743160701, guid: 3eed0651058123240bd33f559d605398,
     type: 3}
@@ -261,6 +264,8 @@ MonoBehaviour:
   FarmerPrefab: {fileID: 6225222254032698798, guid: b57347db48292a1498f043cf8e5e9704,
     type: 3}
   DronePrefab: {fileID: 2023183433951940274, guid: 59524a8f7bdb3fe4ca662feab6804baf,
+    type: 3}
+  DummyMaterialsPrefab: {fileID: 6174345470540196706, guid: e9bf5dc2dd0b50e449e597280957624e,
     type: 3}
 --- !u!4 &844700566
 Transform:

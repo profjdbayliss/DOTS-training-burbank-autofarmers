@@ -18,7 +18,7 @@ public class CamFollow : MonoBehaviour {
         // view angles: 45, 30
         // view dist 10
         // mouse sens 4000
-        EntityManager entityManager = World.Active.EntityManager;
+        EntityManager entityManager = World.All[0].EntityManager;
         Translation trans = entityManager.GetComponentData<Translation>(GridDataInitialization.firstFarmer);
         Vector3 pos = new Vector3(trans.Value.x, trans.Value.y+2, trans.Value.z);
 		viewAngles.x += Input.GetAxis("Mouse X") * mouseSensitivity/Screen.height;

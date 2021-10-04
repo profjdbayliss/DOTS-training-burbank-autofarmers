@@ -3,7 +3,6 @@ using Unity.Mathematics;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-[RequiresEntityConversion]
 public class actor_authoring : MonoBehaviour, IConvertGameObjectToEntity
 {
     //position that the object is at at time of "pathfinding" 

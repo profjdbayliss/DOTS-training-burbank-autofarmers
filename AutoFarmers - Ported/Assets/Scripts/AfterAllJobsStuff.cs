@@ -1,10 +1,13 @@
-﻿using System.Collections;
+﻿using System.CodeDom;
+using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 using Unity.Transforms;
 using Unity.Collections;
+using UnityEditor;
 
 public struct TagInfo
 {
@@ -21,6 +24,11 @@ public struct ComponentSetInfo
     public PlantComponent plantComponent;
 }
 
+[UpdateAfter(typeof(DroneTaskSystem))]
+[UpdateAfter(typeof(FarmerTaskSystem))]
+[UpdateAfter(typeof(MovementSystem))]
+[UpdateAfter(typeof(PerformTaskSystem))]
+[UpdateAfter(typeof(PlantSystem))]
 public class AfterAllJobsStuff : ComponentSystem
 {
     private static Unity.Mathematics.Random rand;
@@ -31,35 +39,32 @@ public class AfterAllJobsStuff : ComponentSystem
         rand = new Unity.Mathematics.Random(42);
     }
 
-    protected override void OnDestroy()
-    {
-        //for (int i = 0; i < allUVs.Length; i++)
-        //{
-        //    if (allUVs[i].IsCreated)
-        //        allUVs[i].Dispose();
-        //}
-
-        base.OnDestroy();
-
-    }
-
+    // protected override void OnDestroy()
+    // {
+    //     //for (int i = 0; i < allUVs.Length; i++)
+    //     //{
+    //     //    if (allUVs[i].IsCreated)
+    //     //        allUVs[i].Dispose();
+    //     //}
+    //
+    //     base.OnDestroy();
+    //
+    // }
+    
+    
     protected override void OnUpdate()
     {
-        EntityManager entityManager = World.Active.EntityManager;
+        EntityManager entityManager = World.All[0].EntityManager;
         entityManager.CompleteAllJobs();
 
         // now do special stuff that can't be done in parallel!
         
         //
-        // component buffer stuff that should eventually be parallel and in burst
-        // and thus deleted from being here because it causes errors if it's not here
+        // ALL COMMAND BUFFER CHANGES
         //
-        // right now the things that don't work for command buffers are:
-        // setComponent, addComponent, removeComponent
-        // so many tags can't be changed unless we're adding/removing them here
 
         // Drone Task System:
-        while (DroneTaskSystem.addRemoveTags.Count > 0)
+        while ( DroneTaskSystem.addRemoveTags.Count > 0)
         {
             TagInfo tagInfo = DroneTaskSystem.addRemoveTags.Dequeue();
             if (tagInfo.shouldRemove == 1)
@@ -105,15 +110,15 @@ public class AfterAllJobsStuff : ComponentSystem
                 
             }
         }
-
-        while (DroneTaskSystem.componentSetInfo.Count > 0)
+        
+        while ( DroneTaskSystem.componentSetInfo.Count > 0)
         {
             ComponentSetInfo setInfo = DroneTaskSystem.componentSetInfo.Dequeue();
             entityManager.SetComponentData(setInfo.entity, setInfo.plantComponent);
         }
 
         // farmer Task System:
-        while (FarmerTaskSystem.addRemoveTags.Count > 0)
+        while ( FarmerTaskSystem.addRemoveTags.Count > 0)
         {
             TagInfo tagInfo = FarmerTaskSystem.addRemoveTags.Dequeue();
             if (tagInfo.shouldRemove == 1)
@@ -157,15 +162,16 @@ public class AfterAllJobsStuff : ComponentSystem
                 }
             }
         }
-
-        while (FarmerTaskSystem.componentSetInfo.Count > 0)
+        
+        while (
+               FarmerTaskSystem.componentSetInfo.Count > 0)
         {
             ComponentSetInfo setInfo = FarmerTaskSystem.componentSetInfo.Dequeue();
             entityManager.SetComponentData(setInfo.entity, setInfo.plantComponent);
         }
 
         // movement system:
-        while (MovementSystem.addRemoveTags.Count > 0)
+        while ( MovementSystem.addRemoveTags.Count > 0)
         {
             TagInfo tagInfo = MovementSystem.addRemoveTags.Dequeue();
             if (tagInfo.shouldRemove == 1)
@@ -211,7 +217,8 @@ public class AfterAllJobsStuff : ComponentSystem
         }
 
         // perform tasks system:
-        while (PerformTaskSystem.addRemoveTags.Count > 0)
+        while ( 
+               PerformTaskSystem.addRemoveTags.Count > 0)
         {
             TagInfo tagInfo = PerformTaskSystem.addRemoveTags.Dequeue();
             if (tagInfo.shouldRemove == 1)
@@ -255,7 +262,7 @@ public class AfterAllJobsStuff : ComponentSystem
                 }
             }
         }
-
+        
         while (PerformTaskSystem.componentSetInfo.Count > 0)
         {
             ComponentSetInfo setInfo = PerformTaskSystem.componentSetInfo.Dequeue();
@@ -279,8 +286,7 @@ public class AfterAllJobsStuff : ComponentSystem
         }
 
         //
-        // Things that have nothing to do with command buffer compile issues and
-        // would likely remain as not parallel.
+        // ALL NON-PARALLEL OPERATIONS WITH SYSTEMS THAT AREN'T COMMAND BUFFER RELATED
         //
 
         //
@@ -315,10 +321,6 @@ public class AfterAllJobsStuff : ComponentSystem
 
                 uvs[uvStartIndex] = new float2(tex.pixelStartX,
                     tex.pixelStartY);
-                //changeTexture(ref tmp.uv[uvStartIndex], tex.pixelStartX, tex.pixelStartY);
-                //changeTexture(ref tmp.uv[uvStartIndex+1], tex.pixelStartX, tex.pixelEndY);
-                //changeTexture(ref tmp.uv[uvStartIndex+2], tex.pixelEndX, tex.pixelEndY);
-                //changeTexture(ref tmp.uv[uvStartIndex+3], tex.pixelEndX, tex.pixelStartY);
                 uvs[uvStartIndex + 1] = new float2(tex.pixelStartX,
                     tex.pixelEndY);
                 uvs[uvStartIndex + 2] = new float2(tex.pixelEndX,
@@ -513,10 +515,5 @@ public class AfterAllJobsStuff : ComponentSystem
         }
 
     }
-
-    public static void changeTexture(ref Vector2 value, float x, float y)
-    {
-        value.x = x;
-        value.y = y;
-    }
+    
 }

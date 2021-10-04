@@ -7,7 +7,7 @@ using UnityEngine;
 // Data structure: hash table with Entity information per tile position
 // where it exists since it's a sparse data set for the majority
 // of the sim
-public class GridData
+public class GridData 
 {
     private static GridData data = null;
 
